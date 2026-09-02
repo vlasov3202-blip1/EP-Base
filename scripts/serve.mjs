@@ -1,0 +1,22 @@
+import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { extname, join, normalize } from 'node:path';
+
+const port = Number(process.env.EP_BASE_PORT || 4173);
+const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' };
+
+createServer(async (request, response) => {
+  try {
+    const requested = request.url === '/' ? '/index.html' : request.url.split('?')[0];
+    const path = normalize(join(process.cwd(), requested));
+    if (!path.startsWith(process.cwd())) throw new Error('Invalid path');
+    const body = await readFile(path);
+    response.writeHead(200, { 'Content-Type': `${types[extname(path)] || 'application/octet-stream'}; charset=utf-8` });
+    response.end(body);
+  } catch {
+    response.writeHead(404);
+    response.end('Not found');
+  }
+}).listen(port, '0.0.0.0', () => {
+  console.log(`EP Base запущен: http://localhost:${port}`);
+});

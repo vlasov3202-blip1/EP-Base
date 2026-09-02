@@ -1,0 +1,12 @@
+{
+  "name": "ep-base",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Easy Parts inventory MVP",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "build": "node scripts/build.mjs",
+    "check": "node --check app.js && node scripts/check.mjs"
+  }
+}
