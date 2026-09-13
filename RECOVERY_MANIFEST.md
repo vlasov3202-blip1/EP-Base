@@ -178,15 +178,22 @@ This file is the source of truth after repository-history loss. A feature is con
 - Shipment history and cancellation contract.
 - Shipment events and audit.
 
-### Infrastructure
+### Infrastructure and reliability
 - In-process job queue with typed handlers.
-- Delayed jobs, retry/backoff and max-attempt failure handling.
-- Tenant-scoped job listing and queue statistics.
+- New durable tenant-scoped job queue backed by the configured data store.
+- Durable jobs keep status, attempts, retry time and results across server restarts.
+- Delayed jobs, exponential retry and max-attempt failure handling.
+- Automated persistence test proves a queued job remains available after reopening the data store.
 - Metrics registry with counters, gauges and latency observations.
 - Health registry with component state.
 - Public lightweight health endpoint and protected metrics/queue endpoints.
 - File-storage backups with metadata, retention pruning and restore.
-- Protected backup administration routes.
+- PostgreSQL backup service using `pg_dump` custom-format backups.
+- PostgreSQL backup verification using `pg_restore --list` before a copy is treated as valid.
+- PostgreSQL restore contract using `pg_restore`, with optional clean restore mode.
+- Backup retention pruning.
+- Separate protected reliability routes for durable jobs and PostgreSQL backup create/list/verify/restore.
+- The reliability routes are wired into the server before ordinary platform routes.
 
 ## Still pending for true production operation
 - Cookie-based browser sessions and CSRF policy.
@@ -195,9 +202,10 @@ This file is the source of truth after repository-history loss. A feature is con
 - Production acquiring-provider credentials and webhook wiring.
 - Production transport-company credentials/API wiring.
 - OAuth authorization flow for third-party integrations; scoped API keys already exist.
-- External persistent queue for horizontal scaling; current queue is in-process.
+- External multi-node task queue when horizontal scaling becomes necessary; durable single-database queue now exists.
 - External metrics/log storage and alert delivery.
-- PostgreSQL off-host backup replication and automated disaster-recovery verification.
+- Off-host/object-storage replication of PostgreSQL backup files and scheduled disaster-recovery drills.
+- Production server must have `pg_dump` and `pg_restore` installed; repository code cannot verify their presence until deployment runtime is available.
 - Production-scale external search index when in-process Product Graph search no longer meets load requirements.
 - Mobile application packaging and store publication pipeline.
 
