@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {MemoryRepository} from './core.mjs';
+import {OfferService} from './offers.mjs';
+import {OfferRankingService} from './offer-ranking.mjs';
+import {ChannelAllocatorService} from './channel-allocator.mjs';
+
+const ctx={companyId:'c1',userId:'owner',role:'owner'};const repo=new MemoryRepository();const wrap={put:(e,r)=>repo.put(ctx,e,r),get:(e,id)=>repo.get(ctx,e,id),list:e=>repo.list(ctx,e)};
+repo.put(ctx,'Product',{id:'p1',name:'Кресло',categoryId:'home.chair',attributes:{material:'oak'},visualReady:true});repo.put(ctx,'Product',{id:'p2',name:'Кресло 2',categoryId:'home.chair',attributes:{material:'oak'},visualReady:true});
+repo.put(ctx,'SellerScore',{id:'seller-score:s1',sellerId:'s1',score:92});repo.put(ctx,'SellerScore',{id:'seller-score:s2',sellerId:'s2',score:65});
+const os=new OfferService({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T12:00:00Z')});
+const good=await os.create(ctx,{id:'o1',productId:'p1',sellerId:'s1',price:30000,stock:5,region:'Москва',deliveryOptions:[{nationwide:true}],visualAssetReady:true,visualQualityScore:90});
+await os.create(ctx,{id:'o2',productId:'p2',sellerId:'s2',price:25000,stock:5,region:'Москва',deliveryOptions:[{nationwide:true}],visualAssetReady:true,visualQualityScore:90});
+repo.put(ctx,'ProductMetrics',{id:'p1',productId:'p1',views:200,orders:10,favorites:20});repo.put(ctx,'ProductMetrics',{id:'p2',productId:'p2',views:200,orders:3,favorites:5});
+repo.put(ctx,'ChannelConnection',{id:'avito',channel:'avito',enabled:true,status:'connected'});
+const ranking=await new OfferRankingService({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T12:00:00Z')}).rank(ctx,{intent:{category:'home.chair',attributes:{material:'oak'}},region:'Москва'});assert.equal(ranking[0].offerId,'o1');assert.equal(ranking[0].paidPromotionWeight,0);assert.equal(ranking.some(x=>x.offerId==='o2'),true);
+const rec=await new ChannelAllocatorService({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T12:00:00Z'),minOrganicScore:60}).recommend(ctx,{offerId:good.id});assert.equal(rec.decision,'recommend_external_channels');assert.deepEqual(rec.channels,['avito']);
+console.log('EINEIRO offer ranking tests: OK');
