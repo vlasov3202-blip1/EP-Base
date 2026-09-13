@@ -92,12 +92,15 @@ jobs:
           test "$code" = "201"
           cat /tmp/eineiro-183.log
 
-      - name: Package recovery candidate
+      - name: Package recovery source and runtime
         run: |
-          tar -czf /tmp/eineiro-183-recovery.tar.gz dist
+          tar --exclude=.git --exclude=dist --exclude=data --exclude=backups -czf /tmp/eineiro-183-source.tar.gz .
+          tar -czf /tmp/eineiro-183-runtime.tar.gz dist
 
       - uses: actions/upload-artifact@v4
         with:
-          name: eineiro-183-recovery
-          path: /tmp/eineiro-183-recovery.tar.gz
+          name: eineiro-183-recovery-bundle
+          path: |
+            /tmp/eineiro-183-source.tar.gz
+            /tmp/eineiro-183-runtime.tar.gz
           retention-days: 7
