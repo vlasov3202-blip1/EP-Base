@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {mkdtemp,rm} from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {JsonFileStore} from './storage.mjs';
+import {DurableJobQueue} from './durable-queue.mjs';
+
+const dir=await mkdtemp(path.join(os.tmpdir(),'eineiro-queue-'));
+const file=path.join(dir,'db.json');
+let now=1000;
+const store=await new JsonFileStore(file).init();
+const ctx={companyId:'c1',userId:'u1',role:'owner'};
+const other={companyId:'c2',userId:'u2',role:'owner'};
+const queue=new DurableJobQueue(store,{baseDelayMs:100,now:()=>now,maxAttempts:3});
+let calls=0;
+queue.register('test',async()=>{calls++;if(calls===1)throw new Error('temporary');return{ok:true};});
+const job=await queue.enqueue(ctx,'test',{x:1});
+assert.equal((await queue.list(ctx)).length,1);
+assert.equal((await queue.list(other)).length,0);
+let out=await queue.work(ctx,{limit:10});
+assert.equal(out[0].status,'retry');
+now=1200;
+out=await queue.work(ctx,{limit:10});
+assert.equal(out[0].status,'done');
+assert.equal((await queue.stats(ctx)).done,1);
+
+const reopened=await new JsonFileStore(file).init();
+const queue2=new DurableJobQueue(reopened,{now:()=>now});
+assert.equal((await queue2.list(ctx))[0].id,job.id);
+await rm(dir,{recursive:true,force:true});
+console.log('EINEIRO durable queue tests: OK');
