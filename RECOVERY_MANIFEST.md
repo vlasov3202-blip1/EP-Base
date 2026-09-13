@@ -1,265 +1,210 @@
 # EINEIRO Recovery Manifest
 
-Status source of truth after repository-history loss. A feature is considered **restored** only when code exists in Git.
+This file is the source of truth after repository-history loss. A feature is considered restored only when code exists in Git; production claims require runtime/provider verification.
 
 ## Product invariants
-- Universal commerce platform, not an auto-dismantling-only CRM.
-- 0% marketplace sale commission. Monetization: transparent subscriptions/services/promotion/logistics; mandatory external costs itemized.
-- Management by exceptions: normal processes stay quiet; owner sees only decisions requiring owner authority.
-- AI acts within policy/confidence/role limits and writes to audit.
+- EINEIRO is a universal commerce platform, not an auto-dismantling-only CRM.
+- Marketplace sale commission is 0%. Monetization is through transparent subscriptions, services, promotion and logistics; mandatory external costs are itemized.
+- Management by exceptions: routine work stays quiet; the owner sees only decisions requiring owner authority.
+- AI acts only inside policy, confidence and permission limits and writes material actions to audit.
 - Market home has no product matrix before a user request.
 - Camera safe zone is immutable and may not be covered, moved, reduced or reused.
 - Camera/voice is the primary Market request interface.
-- A user request is decomposed into **scene slots / requested objects**, not into a fixed number of product candidates.
-- One requested object equals one object placed in the scene. Example: “полка, на которой стоит ваза и книга” = 3 slots: one shelf + one vase + one book.
-- Each scene slot has exactly one currently selected/placed product at a time.
-- Each scene slot has its **own full relevant catalog of variants**. The catalog is not limited to 3 products and may contain any number of genuinely relevant variants; current contract supports up to 100 per page with pagination/lazy loading and no artificial total cap.
-- Selecting another variant replaces only that slot’s product and preserves that slot’s spatial anchor/relationship.
-- Variants must never be represented as duplicate scene objects.
-- The number of scene objects is driven only by the user’s intent/context, not by a UI cap.
-- Cross-slot recommendations may use Product Graph relationships (compatible/complements/same family), but must never merge independent scene slots.
-- Clean View hides UI but keeps all placed scene objects visible.
-- Mobile/tablet/desktop layouts are adaptive, not simple scaled copies.
+- A request is decomposed into scene slots / requested objects. One requested object equals one object in the scene.
+- Example: “полка, на которой стоит ваза и книга” = three slots: one shelf + one vase + one book.
+- Every slot has exactly one currently selected product and its own full catalog of relevant variants.
+- Variant count is not limited to three. Current contract supports up to 100 results per page with pagination and no artificial total cap.
+- Replacing a variant changes only that slot and preserves its spatial anchor/relationship.
+- Variants must never become duplicate scene objects.
+- Cross-slot ranking may use product-graph relationships without merging independent slots.
+- Clean View hides interface elements but keeps all placed products visible.
+- Phone, tablet and desktop layouts are adaptive, not scaled copies.
 
 ## Restored in Git
-### Business
-- Adaptive command center / AI Director
-- Autonomy score
-- Exceptions queue
-- AI-ROP: first response SLA <= 5 min, follow-up, discount/margin controls, seller scoring, suspicious behavior
-- AI Dispatcher / tasks with priorities and statuses
-- AI Price Lab: current / minimum / optimal price and guarded application
-- Warehouse: zone -> rack -> shelf -> cell
-- Warehouse AI re-slotting demonstration
-- Product inventory and publication status
-- Strategic analytics
-- Finance surface
-- Connector center
-- Unified Inbox: conversation -> customer -> product -> seller -> order
-- Market order workflow: created -> packing -> shipped -> tracking
-- Plans: Start / Pilot / Autopilot
-- 7-day grace capability model
-- Roles / permissions model
-- Audit log
 
-### Market
-- Camera-first entry
-- Real browser camera via getUserMedia when permission/device allow it
-- Voice request via SpeechRecognition where supported
-- Short camera-frame burst instead of continuous video upload
-- Browser -> `/api/vision/resolve` bridge
-- Request decomposition into independent scene slots
-- One selected product per requested scene object
-- Multi-object composition: e.g. shelf + vase + book appear simultaneously as three different objects, not variants
-- Independent full variant catalog per scene slot
-- Per-slot pagination through `/api/search/slots`
-- Replace-in-place for a slot while preserving its anchor
-- No artificial cap on total relevant variants per slot
-- Product Graph context can improve the ranking of related objects without changing slot identity
-- Clean View keeps all placed products visible
-- Local development fallback is clearly separate from the real AI path
+### Business / command center
+- Adaptive command center and AI Director.
+- Autonomy score and exception queue.
+- AI sales control: response-time rules, follow-up, discount/margin controls, seller scoring and suspicious-behavior signals.
+- AI dispatcher/tasks with priorities and statuses.
+- Price Lab with current/minimum/optimal price and guarded changes.
+- Warehouse hierarchy: zone -> rack -> shelf -> cell.
+- Warehouse re-slotting recommendations.
+- Product inventory/publication state, strategic analytics and finance surfaces.
+- Unified Inbox user interface and Market order workflow.
+- Start / Pilot / Autopilot plans and 7-day grace capability model.
+- Roles, permissions and audit surfaces.
 
-### Admin
-- Platform-control surface
-- Tenant/company health
-- Exception queue
-- Notifications count
-- Backup status surface
-- Platform system pulse
+### Market / spatial search
+- Camera-first entry with browser camera support.
+- Voice input where supported.
+- Short frame burst instead of continuous video upload.
+- Browser -> `/api/vision/resolve` bridge.
+- Request decomposition into independent scene slots.
+- One selected product per requested scene object.
+- Multi-object composition such as shelf + vase + book.
+- Independent full catalog per scene slot.
+- Per-slot pagination through `/api/search/slots`.
+- Replace-in-place while preserving each slot anchor.
+- No artificial total cap on relevant variants.
+- Product Graph context improves ranking of related objects without changing slot identity.
+- Clean View keeps all placed products visible.
+- Local development fallback is clearly separate from the real AI path.
 
-### Level-4 platform core
-- Universal entity list
-- Event -> facts -> policy -> confidence -> decision -> action -> audit pipeline
-- Owner-decision reasons
-- Connector capability matrix
-- AI provider abstraction config
-- Product invariants in code
-- Platform-layer registry
-
-### Server core
-- Multi-company tenant key isolation
-- Server-side RBAC permission checks
-- Tenant-scoped repository interface with in-memory reference implementation
-- Tenant-scoped event bus
-- Tenant-scoped audit log
-- Owner decision escalation gate by confidence / limits / legal / financial / anomaly reasons
-- Durable JSON storage adapter with atomic writes
-- Schema migrations and schema-version tracking
-- Server-side user records scoped by company
-- Password hashing via PBKDF2-SHA256 with per-user salt
-- Login / authenticate / logout session management
-- Session expiry handling
-- Tenant-scoped durable repository reload verification
-- Runtime data files excluded from Git
-- Automated core/auth/storage tests wired into `npm run check`
-
-### HTTP auth / Platform API
-- Bearer-session authentication middleware over the restored session service
-- `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/me`
-- Tenant context is derived from the authenticated session, not accepted from request payloads
-- RBAC checks enforced at endpoint level
-- Versioned `/api/v1/` resources for products, orders, tasks, messages, events and audit
-- Tenant-scoped reads/writes through the durable repository
-- 401 for unauthenticated requests and 403 for insufficient role permissions
-- Same resource IDs remain isolated between companies
-- Automated HTTP auth/RBAC/tenant-isolation tests wired into `npm run check`
-
-### Public integration API
-- Tenant-bound API keys for third-party CRMs
-- Raw API tokens are returned only at creation time; stored records contain a SHA-256 hash
-- `X-API-Key` authentication alongside Bearer sessions
-- Per-key scopes such as `products:read`, `products:write`, `orders:read`, `messages:write`
-- Scope enforcement on Platform API resources
-- Per-key request rate limiting with 429 / retry metadata
-- Owner/admin key creation and revocation endpoints
-- API-key requests inherit the key's tenant; clients cannot supply another `companyId`
-- Automated scope/rate-limit/revocation/tenant tests wired into `npm run check`
-
-### Import / migration center
-- CSV parser with quoted-field handling
-- Simple XML `<item>` import contract
-- Configurable field mapping from external CRM schemas
-- Product + inventory normalization into EINEIRO entities
-- Reverse inventory mode: imported stock exists immediately while physical placement remains pending
-- Imported inventory can be assigned to warehouse cells after migration instead of blocking the import
-- Row-level error collection instead of aborting the entire import
-- Tenant-scoped imported records
-- Automated CSV/XML/reverse-inventory tests wired into `npm run check`
+### Multimodal AI search
+- Provider-neutral VisionSearchService.
+- OpenAI Responses API gateway with image input and structured JSON output.
+- `store:false` requests.
+- Configurable model through environment configuration; model name is not shown in product UI.
+- Frame sampling and metadata minimization before external AI calls.
+- Voice/context length limiting.
+- Explicit instruction to ignore personal identifiers and focus on product context.
+- Confidence gate: low confidence returns one clarification instead of random products.
+- Each requested object creates one independent search query and scene slot.
+- Each slot receives one current top offer plus its own full catalog.
+- Automated tests cover multi-object decomposition, independent catalogs, minimization and confidence gating.
 
 ### Product Graph / universal category schema
-- Universal hierarchical category schema with category-specific attributes
-- Product validation against category attribute types
-- Product graph nodes for products/variants
-- Typed relations such as `compatible_with`, `complements`, and `same_family`
-- Relation-aware recommendations
-- Relation/context boost in product search
-- Graph-backed catalog source wired into Market runtime
-- Category alias normalization from user-facing labels to universal category IDs
-- Cursor pagination across graph search results
-- Automated graph/category/relation/search/pagination tests wired into `npm run check`
+- Hierarchical universal categories with category-specific attributes.
+- Product validation against category attribute types.
+- Product/variant graph nodes.
+- Typed relationships including compatibility, complements and same family.
+- Relationship-aware recommendations and ranking boosts.
+- Graph-backed Market catalog source.
+- Category alias normalization from user-facing labels to canonical category IDs.
+- Cursor pagination.
+- Automated graph/category/relation/search tests.
 
-### Search / recommendation runtime
-- Provider-neutral SearchService
-- Normalized relevance ordering
-- Independent `searchSlots` execution for multiple scene objects
-- One current top offer per slot plus full per-slot catalog
-- Per-slot cursor pagination
-- Graph-backed search source
-- Context-product relationship boost
-- Automated independent-slot, graph and pagination tests
+### Search and recommendations
+- Provider-neutral search service.
+- Relevance ordering.
+- Independent search for multiple scene slots.
+- One current offer plus full catalog per slot.
+- Per-slot cursor pagination.
+- Product Graph source and context-product relationship boost.
+
+### Server security and tenant isolation
+- Server-side permission checks.
+- Tenant-scoped repositories, events and audit.
+- Owner-decision escalation rules for low confidence, limits, legal/financial confirmations and serious anomalies.
+- Password hashing with PBKDF2-SHA256 and per-user salt.
+- Login, authentication, logout and session expiry.
+- Same entity IDs remain isolated between companies.
+- Automated security/tenant tests.
+
+### PostgreSQL data layer
+- PostgreSQL storage adapter implemented and selectable through `DATABASE_URL`.
+- Automatic schema migrations.
+- Tables for users, sessions, tenant records, audit and events.
+- Company ID is part of tenant record keys and queries.
+- User email uniqueness is scoped by company.
+- Repository CRUD, authentication data, events and audit work through PostgreSQL.
+- Connection pool configuration through environment settings.
+- Server automatically uses PostgreSQL when configured and keeps file storage for local development.
+- Automated migration/query/tenant-isolation contract tests are wired into the main check command.
+
+### HTTP authentication / Platform API
+- Bearer-session authentication.
+- Auth routes for register/login/logout and current-user lookup.
+- Tenant context comes from authentication, never from a client-supplied company ID.
+- Endpoint-level permission enforcement.
+- Versioned endpoints for products, orders, tasks, messages, events and audit.
+- Tenant-scoped reads/writes.
+- 401 for missing authentication and 403 for insufficient permissions.
+
+### Third-party integration access
+- Tenant-bound API keys.
+- Raw key returned only at creation; only a SHA-256 hash is stored.
+- Per-key permissions and request-rate limits.
+- Owner/admin creation and revocation.
+- External requests inherit the key's tenant.
+- Automated permission/rate-limit/revocation tests.
+
+### Import / migration center
+- CSV parser with quoted-field handling.
+- Simple XML item import contract.
+- Configurable field mapping.
+- Product + inventory normalization.
+- Reverse inventory mode: stock is imported first, physical placement can be assigned later.
+- Row-level error collection instead of aborting the entire import.
+- Tenant-scoped imported records.
 
 ### Unified Inbox backend
-- Provider-neutral connector registry
-- Normalized inbound message model
-- Inbound deduplication by channel + external message ID
-- Tenant-scoped inbox persistence
-- Outbound queue with client request idempotency key
-- Anti-double-send protection
-- Delivery status tracking: queued / retry / sent / failed
-- Exponential retry/backoff for transient send failures
-- Terminal failure after configurable max attempts
-- Tenant-scoped inbox events and audit entries
-- Automated dedup/idempotency/retry tests wired into `npm run check`
+- Normalized inbound message model.
+- Inbound deduplication by channel + external message ID.
+- Tenant-scoped message persistence.
+- Outbound queue with request idempotency.
+- Protection against double sending.
+- Delivery states, retry/backoff and terminal failure.
+- Inbox events and audit.
 
-### Connector runtime
-- Base adapter contract with declared capabilities
-- Provider registry
-- Normalized webhook contract
-- Polling contract with cursor support
-- Outbox dispatch through provider adapters
-- Webhook/polling audit + event emission
-- Default adapter slots for EINEIRO Market, Avito, VK, Youla, Drom, Farpost, Auto.ru and Zzap
+### Channel runtime
+- Common channel-adapter contract and registry.
+- Normalized webhook contract.
+- Polling contract with cursor support.
+- Outbound dispatch through adapters.
+- EINEIRO Market has a working native adapter for messages and publication persistence.
+- Avito, VK, Youla, Drom, Farpost, Auto.ru and Zzap remain explicitly unconfigured until official endpoints/credentials are verified; they no longer pretend to be operational.
 
-### Marketplace transaction backend
-- Tenant-scoped order persistence
-- Order item normalization and totals
-- Lifecycle: created -> accepted -> packing -> shipped -> delivered / returned / cancelled
-- Illegal state-transition protection
-- Shipment creation contract
-- Tracking synchronization contract
-- In-memory shipment provider reference implementation
-- Order/shipment audit + event emission
-- Automated connector/order lifecycle tests wired into `npm run check`
+### Secure channel connection configuration
+- Per-company channel connection records.
+- AES-256-GCM encryption for external channel credentials using `EINEIRO_SECRET_KEY`.
+- Stored credentials are never returned by channel-list/read endpoints.
+- Connection state tracks configured/enabled/status/last check/last success/last error.
+- Protected routes for listing, saving and disabling channel connections.
+- Different companies cannot read each other's channel configuration.
+- Encryption and tenant-isolation checks are wired into the main test command.
 
-### Payments backend
-- Provider-neutral payment registry
-- Tenant-scoped payment persistence
-- Payment create/sync lifecycle
-- Idempotent payment creation
-- Partial/full refund support
-- Idempotent refunds
-- Payment/refund audit + event emission
+### Marketplace transactions
+- Tenant-scoped orders.
+- Normalized order items and totals.
+- Lifecycle: created -> accepted -> packing -> shipped -> delivered / returned / cancelled.
+- Illegal transition protection.
+- Shipment creation and tracking contracts.
+- Order/shipment events and audit.
 
-### Logistics backend
-- Provider-neutral logistics registry
-- Tenant-scoped shipment persistence
-- Idempotent shipment creation
-- Tracking number / tracking URL / ETA synchronization
-- Shipment history
-- Shipment cancellation contract
-- Shipment audit + event emission
-- Automated payments/logistics tests wired into `npm run check`
+### Payments
+- Provider-neutral payment registry.
+- Tenant-scoped payment persistence.
+- Idempotent creation and status synchronization.
+- Partial/full refunds with idempotency.
+- Payment/refund events and audit.
 
-### Multimodal Vision backend
-- Provider-neutral VisionSearchService
-- OpenAI Responses API gateway with image input
-- Structured Outputs JSON Schema for **requested object / scene-slot decomposition**
-- `store:false` requests
-- Configurable model via `OPENAI_MODEL`; model name is not exposed in product UI
-- Frame sampling with bounded frame count and minimum frame gap
-- Metadata minimization before frames leave the trusted boundary
-- Voice/context length limiting
-- Explicit instruction to ignore personal identifiers and focus on product-relevant context
-- Confidence gate: low-confidence requests return one clarification instead of product search
-- Each requested object produces one scene slot and one independent search query
-- Each slot receives one current top offer plus its own full relevant variant catalog
-- Full per-slot catalog supports pagination / up to 100 results per page and no artificial total cap
-- Variants do not create duplicate scene objects
-- Tenant-scoped audit/events for vision resolution
-- Automated tests for shelf + vase + book decomposition, independent catalogs, current-offer selection, minimization and confidence gating
+### Logistics
+- Provider-neutral logistics registry.
+- Tenant-scoped shipments.
+- Idempotent shipment creation.
+- Tracking number, tracking URL and ETA synchronization.
+- Shipment history and cancellation contract.
+- Shipment events and audit.
 
-### Infrastructure runtime
-- Provider-neutral in-process job queue
-- Typed worker handlers
-- Delayed jobs and exponential retry/backoff
-- Max-attempt terminal failure handling
-- Tenant-scoped job listing
-- Queue statistics for Admin/observability
-- Metrics registry with counters, gauges, latency observations, averages and p95
-- Health registry with component-level `ok` / `degraded` / `down` state
-- Public lightweight `/health` endpoint
-- Protected `/metrics` and queue Admin endpoints
-- Platform/company backup jobs through the queue
-- Atomic runtime data backups with metadata
-- Backup listing, retention pruning and restore contract
-- Protected Admin backup create/list/restore endpoints
-- Runtime backup directory excluded from Git
-- Automated queue/retry/metrics/health/backup/restore tests wired into `npm run check`
+### Infrastructure
+- In-process job queue with typed handlers.
+- Delayed jobs, retry/backoff and max-attempt failure handling.
+- Tenant-scoped job listing and queue statistics.
+- Metrics registry with counters, gauges and latency observations.
+- Health registry with component state.
+- Public lightweight health endpoint and protected metrics/queue endpoints.
+- File-storage backups with metadata, retention pruning and restore.
+- Protected backup administration routes.
 
-## Required production restoration still pending
-These were part of the agreed product but still need runtime/provider implementation:
-- Production database adapter (PostgreSQL or equivalent) and deployment migrations; durable provider-neutral adapter exists
-- Cookie-based browser session transport / CSRF policy; Bearer HTTP auth is restored
-- Pixel-level redaction provider for faces/license plates before external AI calls; metadata minimization hook exists
-- Real Avito/Drom/Farpost/Auto.ru/VK/Youla/Zzap provider adapters and credentials/webhook wiring; contracts/runtime now exist
-- Production acquiring provider credentials/webhook wiring; payment contract/service exists
-- Production transport-company provider credentials/API wiring; logistics contract/service exists
-- OAuth 2.0 authorization flow for third-party integrations; scoped API keys already exist
-- Production-scale external queue/worker backend for horizontal scaling; in-process queue runtime exists
-- Production metrics/log shipping backend and alert delivery; health/metrics runtime exists
-- Off-host/object-storage backup replication and automated DR verification; local backup/restore runtime exists
-- Production-scale external search index (OpenSearch/Elasticsearch/vector or equivalent) replacing the in-process Product Graph index when scale requires it
-- Mobile-app packaging/publication pipeline
+## Still pending for true production operation
+- Cookie-based browser sessions and CSRF policy.
+- Pixel-level redaction for faces/license plates before external AI calls.
+- Verified real adapters and credentials/webhooks for Avito, VK, Youla, Drom, Farpost, Auto.ru and Zzap.
+- Production acquiring-provider credentials and webhook wiring.
+- Production transport-company credentials/API wiring.
+- OAuth authorization flow for third-party integrations; scoped API keys already exist.
+- External persistent queue for horizontal scaling; current queue is in-process.
+- External metrics/log storage and alert delivery.
+- PostgreSQL off-host backup replication and automated disaster-recovery verification.
+- Production-scale external search index when in-process Product Graph search no longer meets load requirements.
+- Mobile application packaging and store publication pipeline.
 
 ## Plans
-### Start
-Free. No AI. Manual warehouse CRUD. Camera barcode scanning allowed. No API/feed publishing. Problem analytics limited.
-
-### Pilot
-5 USD-equivalent/month display policy as configured by billing locale. AI recommendations; human accepts decisions. External costs are itemized.
-
-### Autopilot
-15 USD-equivalent/month display policy as configured by billing locale. AI may execute inside policy/permission limits. External costs are itemized.
+- Start: free; no AI; manual warehouse operations; camera barcode scanning allowed; no API/feed publishing; limited problem analytics.
+- Pilot: configured low-cost paid plan; AI recommends and a human accepts decisions; external costs are itemized.
+- Autopilot: configured paid plan; AI may execute inside policy/permission limits; external costs are itemized.
 
 ## Rule for future work
-No chat statement counts as implementation. Every completed feature must have a Git commit. Every production-critical feature also needs a test or runtime verification record before being marked complete.
+No chat statement counts as implementation. Every completed feature must have a Git commit. Every production-critical feature also requires tests or runtime verification before being marked complete.
