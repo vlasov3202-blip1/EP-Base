@@ -7,231 +7,180 @@ This file is the source of truth after repository-history loss. A feature is con
 - Marketplace sale commission is 0%. Monetization is through transparent subscriptions, services, promotion and logistics; mandatory external costs are itemized.
 - Management by exceptions: routine work stays quiet; the owner sees only decisions requiring owner authority.
 - AI acts only inside policy, confidence and permission limits and writes material actions to audit.
+- Money cannot buy organic relevance or bypass quality/eligibility gates.
+- Product, Offer, SKU and Inventory are separate layers.
 - Market home has no ordinary product matrix before a user request.
-- Limited Showcase Cards are allowed on Market home as clearly separate premium placement and must not affect organic relevance.
-- Camera safe zone is immutable and may not be covered, moved, reduced or reused.
+- Limited Showcase Cards are allowed as commercial placement only after system eligibility; they do not replace organic relevance.
+- Camera safe zone is immutable.
 - Camera/voice is the primary Market request interface.
-- A request is decomposed into scene slots / requested objects. One requested object equals one object in the scene.
-- Example: “полка, на которой стоит ваза и книга” = three slots: one shelf + one vase + one book.
-- Every slot has exactly one currently selected product and its own full catalog of relevant variants.
-- Variant count is not limited to three. Current contract supports up to 100 results per page with pagination and no artificial total cap.
-- Replacing a variant changes only that slot and preserves its spatial anchor/relationship.
-- Variants must never become duplicate scene objects.
-- Cross-slot ranking may use Product Graph relationships without merging independent slots.
-- Clean View hides interface elements but keeps all placed products visible.
+- A request is decomposed into independent scene slots; one requested object equals one placed object.
+- Each slot has one current Offer plus its own full relevant catalog; no artificial total cap.
+- Replace-in-place preserves anchor/context where valid.
+- Clean View hides UI but keeps placed products.
 - Phone, tablet and desktop layouts are adaptive, not scaled copies.
-- Old EP Base automotive behavior belongs only to the automotive domain module and is not the universal product model.
+- Old EP Base automotive behavior belongs only to the automotive domain module.
 
 ## Restored in Git
 
-### Canonical product split
-- `EINEIRO_CANONICAL.md` defines the current product model and explicitly prevents old EP Base behavior from becoming the main product by accident.
-- Business entry now loads `eineiro-business.js`, a universal command center, instead of the old auto-dismantling-oriented `app.js`.
-- Automotive donor/OE/applicability/warranty logic remains isolated in `server/auto-domain.mjs` as a domain module.
+### Canonical platform split
+- `EINEIRO_CANONICAL.md` defines the current platform model.
+- Business loads universal `eineiro-business.js`, not the old auto-dismantling UI.
+- Automotive donor/OE/applicability/warranty logic is isolated in `server/auto-domain.mjs`.
+
+### Universal commerce model
+- Separate Product, Offer, SKU and Inventory layers.
+- Offer owns seller-specific price, stock, condition, region, delivery, visual readiness and freshness.
+- SKU owns variant attributes/barcode.
+- Inventory is location-specific and tracks quantity, reservation and available stock.
+- Organic Offer ranking applies hard eligibility before scoring.
+- Hard eligibility includes active offer, stock, price, active seller, delivery, region, visual readiness and visual quality.
+- Organic ranking factors: intent relevance, user relevance, visual quality, price relevance, delivery relevance, seller quality, freshness, behavior prediction and repetition penalty.
+- Paid promotion weight is zero in organic ranking.
+
+### Seller reputation and fair promotion
+- Seller Score uses completed orders, cancellations, returns, disagreements, shipping SLA, response time, description accuracy, moderation issues and reviews.
+- Product/Offer promotion eligibility is system-owned, not owner-selected.
+- Low-quality offers are routed to improvement rather than paid amplification.
+- AI Channel Allocator recommends external channels only after organic eligibility and only among live connected channels.
+- Seller budget cannot override organic eligibility.
 
 ### EINEIRO Business / Adaptive Command Center
-- Universal command center with operational main screen, sales, tasks, Price Lab, warehouse, products, analytics, finance and integrations.
-- Adaptive command-center concept and AI Director.
-- Autonomy score and exception queue.
-- AI sales control: response-time rules, follow-up, discount/margin controls, seller scoring and suspicious-behavior signals.
-- AI dispatcher/tasks with priorities and statuses.
-- Price Lab with current/minimum/optimal price and guarded changes.
-- Warehouse hierarchy: zone -> rack -> shelf -> cell.
-- Warehouse re-slotting recommendations and step-by-step placement guidance.
-- Product inventory/publication state, strategic analytics and finance surfaces.
-- Unified Inbox user interface and Market order workflow.
-- Start / Pilot / Autopilot plans and 7-day grace capability model.
-- Roles, permissions and audit surfaces.
-- Contextual onboarding: normal interface first, dim everything except the highlighted control, then short guided explanations.
-- Owner view separates routine notifications from decisions that truly require the owner.
-- 30-day forecast and external-signal cards restored as owner context rather than automatic commands.
-- Morning owner report shows business state, AI actions, estimated extra sales and whether intervention is required.
-- Main-screen personalization supports hiding/reordering blocks.
+- Universal command center with operational main screen, sales, tasks, Price Lab, warehouse, products, analytics, finance, marketing, delivery, contours and integrations.
+- AI Director, autonomy score, exception queue, AI Sales Control, dispatcher/tasks, Price Lab and Warehouse intelligence.
+- Unified Inbox and Market orders.
+- Start / Pilot / Autopilot and 7-day grace capability model.
+- Contextual onboarding, owner-only decisions, 30-day forecast, external signals, morning report and main-screen personalization.
+- Business snapshot receives server-side products, orders, tasks, payments, shipments, campaigns, finance and cross-contour operations state.
+
+### Cross-contour operations brain
+- Marketing -> Sales -> Stock -> Warehouse -> Order -> Payment -> Delivery -> Finance are analyzed as one causal chain.
+- Routine remediation is separated from owner decisions.
+- Cross-contour signals can produce automatic actions or owner exceptions based on severity/policy.
+
+### AI Marketing Control
+- Goal is profitable demand, not raw traffic.
+- Campaigns include product selection, channels, audience, budgets and guardrails.
+- Creative lifecycle includes generation, visual readiness, publishing, testing, winning/losing states and mutation of winners.
+- Creative Factory separates copy generation from image/video generation and does not mark incomplete media as fully ready.
+- Marketing tests collect impressions, clicks, leads, orders, revenue and spend.
+- Weak variants can be paused automatically; winning variants can be scaled inside limits.
+- New variants can be generated from winners.
+- Marketing Publisher abstraction supports internal EINEIRO Market and future external channels.
+- EINEIRO Market Showcase placements are read from live stored placements instead of only hard-coded cards.
+- Marketing Memory stores prior experiments, audience/context, changed variables, control groups, results and lessons.
+- Experiment planning supports explicit control share and single-variable tests.
+
+### Finance Guard
+- Finance is an economic limiter for other contours.
+- Finance Guard can deny or require review for marketing/procurement based on cash reserve, budget share and margin floor.
+- External/acquiring/logistics/returns/service costs remain itemized; sale commission remains 0%.
+
+### Procurement and Unserved Demand
+- Unserved Market requests are persisted instead of discarded.
+- Demand signals carry strength based on saved intent, notify intent, willingness to wait, budget, preorder willingness and checkout attempt.
+- Unserved Demand can be clustered for category growth, seller acquisition, procurement and marketing.
+- AI Procurement creates proposals from demand/stock needs.
+- Purchase Order creation requires fresh Finance + Warehouse + Policy approval and rechecks gates immediately before confirmation.
+
+### Fulfillment / Partner-Operator First
+- Operator, Location and ServiceOffer entities restored.
+- Service types can cover Storage, Pickup, Packaging, Delivery, Inspection, Repair, Installation and future expert verification.
+- Fulfillment selects dynamically by geography, category, capability, price, SLA, capacity/load, rating and policy context.
+- EINEIRO is modeled as the orchestration layer rather than assuming ownership of every warehouse/point/logistics asset.
+
+### Returns and Center for Disagreement Resolution
+- Ordinary returns are separated from mismatch/damage cases.
+- Disagreement stores buyer claim, seller response, evidence, AI analysis, proposed resolution, human review and final resolution.
+- AI establishes facts/confidence and proposes fair resolution; it does not automatically assign blame.
+- Ambiguous cases escalate to human review.
+
+### Policy / Decision / Autonomy governance
+- Policy Engine supports ALLOW, DENY, REQUIRE_APPROVAL and ALLOW_WITH_LIMIT.
+- Policies can scope role/subject/action/resource/conditions/limits/priority/version.
+- Risk classification uses amount, confidence, customer impact, affected count and external dependency.
+- Decision Engine stores proposal, reason, policy, risk, status, expiry and execution result.
+- Policy is rechecked immediately before execution.
+- Rollback is also policy-gated.
+- Owner-required decisions automatically produce exceptions.
+- Autonomy Orchestrator composes Feature Flag -> Finance Guard -> Policy -> Decision before autonomous action.
+
+### Feature Flags and rollout
+- Feature flags support feature kind/key, tenant targeting, region targeting, category targeting and percentage rollout.
+- Flags are deterministic per subject and allow internal -> pilot -> percentage/category/region -> all rollout without Core edits.
+
+### Moderation Engine
+- Moderation reads category policy/schema inputs for forbidden/restricted behavior, mandatory fields, documents, certificates and age constraints.
+- Blocking issues create a moderation result instead of allowing the offer to proceed silently.
 
 ### AI operations / management by exceptions
 - Employee-correction chain: warning -> hint -> task -> verification -> retraining -> owner escalation.
-- Correction steps may create staff tasks, personal training assignments and owner exceptions with estimated loss.
-- Warehouse planning uses demand, age, heavy-item safety and fast/slow zones.
-- 30-day forecast combines internal metrics with external signals.
-- Morning report keeps routine AI actions separate from material owner decisions.
-- AI Seller supports grounded reply suggestions, duty scheduling, follow-up creation and listing improvement using system facts only.
-- AI costs are recorded in `у.е.` and can be summarized by feature without exposing provider/model details in the product UI.
-- Notifications are separated into routine, owner decision, platform issue, appeal, task and training flows.
+- Warehouse planning, forecast, morning report, AI Seller, AI costs and notification separation restored.
 
-### Price Lab / pricing policy
-- Server-side price recommendations use current price, cost, demand, stock age and market reference.
-- Seller prices below minimum or outside the allowed range require approval.
-- Approved price changes write a durable price-change record.
-
-### Warehouse intelligence
-- Prioritizes work by urgency, demand, customer wait state, age and blocking status.
-- Assigns tasks using employee load and heavy-item capability.
-- Placement guide chooses suitable cells and produces step-by-step instructions.
-- Warehouse exceptions are stored separately from routine tasks.
-
-### Plans and economics
-- Server-side Start / Pilot / Autopilot capability rules restored.
-- Grace period enforces: no AI, manual warehouse operations, barcode camera allowed, no API/feed publishing and limited analytics.
-- Marketplace sale commission is hard-coded as 0% in order economics.
-- Acquiring, logistics, returns, promotion and paid services are itemized separately.
-- Channel-specific publication guards can reject unsupported category/condition combinations.
+### Price Lab / Warehouse intelligence
+- Server-side minimum/optimal price recommendations and guarded price changes.
+- Warehouse prioritization, load-aware assignment, placement guidance and warehouse exceptions.
 
 ### Market / spatial search
-- Camera-first request flow with browser camera support.
-- Voice input where supported.
-- Short frame burst instead of continuous video upload.
-- Browser -> `/api/vision/resolve` bridge.
-- Request decomposition into independent scene slots.
-- One selected product per requested scene object.
-- Multi-object composition such as shelf + vase + book.
-- Independent full catalog per scene slot.
-- Per-slot pagination through `/api/search/slots`.
-- Replace-in-place while preserving each slot anchor.
-- No artificial total cap on relevant variants.
-- Product Graph context improves ranking of related objects without changing slot identity.
-- Clean View keeps all placed products visible.
-- Local development fallback is clearly separate from the real AI path.
-- Visual capability model: standard media, 360 object, spatial placement, wall placement, body try-on, face try-on, vehicle try-on and measured 3D.
-- Scene packs for room, garage, desk, body, face and measured-space contexts.
-- Scan patterns differ by scene type.
-- Phone, tablet and desktop use different camera-safe-zone geometry and catalog/control composition.
-- Product visual assets carry isolation/3D readiness state so poor raw photos can be normalized before spatial placement.
-- Market home supports limited premium Showcase Cards without turning them into the ordinary pre-query catalog.
+- Camera-first request flow, voice context and short frame sampling.
+- Vision -> structured intent -> Search -> Recommendation -> scene slots.
+- Independent slot catalogs, pagination and replace-in-place.
+- Product Graph relationship-aware ranking.
+- Scene packs, category-specific scan patterns and device-specific layouts.
+- Visual capability model includes standard media, 360, spatial/wall placement, body/face/vehicle try-on and measured 3D.
+- Product visual pipeline tracks isolation/3D readiness and visual quality.
+- Clean View and camera safe-zone invariants preserved.
 
-### Multimodal AI search
-- Provider-neutral VisionSearchService.
-- OpenAI Responses API gateway with image input and structured JSON output.
-- `store:false` requests.
-- Configurable model through environment configuration; model name is not shown in product UI.
-- Frame sampling and metadata minimization before external AI calls.
-- Voice/context length limiting.
-- Explicit instruction to ignore personal identifiers and focus on product context.
-- Confidence gate: low confidence returns one clarification instead of random products.
-- Each requested object creates one independent search query and scene slot.
-- Each slot receives one current top offer plus its own full catalog.
-
-### Product Graph / universal category schema
+### Product Graph / search / recommendation
 - Hierarchical universal categories with category-specific attributes.
-- Product validation against category attribute types.
-- Product/variant graph nodes.
-- Typed relationships including compatibility, complements and same family.
-- Relationship-aware recommendations and ranking boosts.
-- Graph-backed Market catalog source.
-- Category alias normalization from user-facing labels to canonical category IDs.
-- Cursor pagination.
-
-### Automotive domain module
-- Donor vehicle entity.
-- OE / cross numbers / internal article / barcode / applicability.
-- Default 14-day warranty and category-specific exceptions.
-- Photo acceptance uses the first four images and may resolve an existing or new product.
-- Donor-derived applicability is auto-filled when appropriate.
-- This module is optional and must not shape unrelated categories.
+- Product/variant graph and typed relations.
+- Exact/category/attribute/compatibility/semantic retrieval foundations.
+- LLM structures intent but does not directly choose final product list.
 
 ### EINEIRO Admin / Control Plane
-- Admin surface now loads live server overview instead of hard-coded demonstration companies and incidents.
-- Live overview reports storage type, companies, users, records, open exceptions, unread notifications, AI cost and company-backup count.
-- Company health is derived from real stored exceptions and failed background jobs.
-- Admin remains an exception-first control plane, not a decorative dashboard.
+- Admin overview now uses live server data for companies, users, records, exceptions, notifications, AI cost and backups.
+- Company health derives from stored exceptions/jobs rather than static demo values.
+- Full Control Plane section model (Platform / Companies / Market / Categories / AI / Autonomy / Integrations / Moderation / Experiments / Feature Flags / Audit) remains the next UI/backend expansion.
 
-### Server security and tenant isolation
-- Server-side permission checks.
-- Tenant-scoped repositories, events and audit.
-- Owner-decision escalation rules for low confidence, limits, legal/financial confirmations and serious anomalies.
-- Password hashing with PBKDF2-SHA256 and per-user salt.
-- Login, authentication, logout and session expiry.
-- Same entity IDs remain isolated between companies.
-- Bearer sessions remain available for integrations.
-- Browser session transport is restored with HttpOnly session cookie, separate CSRF token cookie and CSRF enforcement on state-changing browser requests.
+### Security / identity / tenant isolation
+- Server-side permissions and tenant-scoped data/event/audit.
+- PBKDF2 password hashing, login/session/logout/expiry.
+- Bearer sessions for integrations and browser HttpOnly cookie + CSRF transport.
+- Same IDs are isolated by company.
 
-### PostgreSQL data layer
-- PostgreSQL storage adapter selectable through `DATABASE_URL`.
-- Automatic schema migrations.
-- Tables for users, sessions, tenant records, audit and events.
-- Company ID is part of tenant record keys and queries.
-- User email uniqueness is scoped by company.
-- Repository CRUD, authentication data, events and audit work through PostgreSQL.
-- Server automatically uses PostgreSQL when configured and keeps file storage for local development.
-- Store can enumerate companies and export one company for isolated backup/restore.
+### PostgreSQL / API / import / inbox / channels
+- PostgreSQL storage and migrations.
+- Tenant Platform API and scoped API keys.
+- CSV/XML import foundation and reverse inventory.
+- Unified Inbox with deduplication/idempotent outbound delivery/retry.
+- Native EINEIRO Market adapter.
+- Real Avito messenger adapter contract; live account verification still needs credentials.
+- External channel credentials are encrypted per company.
 
-### Platform API and third-party access
-- Auth routes for register/login/logout and current-user lookup.
-- Tenant context comes from authentication, never from a client-supplied company ID.
-- Endpoint-level permission enforcement.
-- Versioned endpoints for products, orders, tasks, messages, events and audit.
-- Tenant-bound API keys, hashed storage, per-key permissions and request-rate limits.
-- Owner/admin key creation and revocation.
-- External requests inherit the key's tenant.
-
-### Import / migration center
-- CSV parser with quoted-field handling.
-- XML item import contract.
-- Configurable field mapping.
-- Product + inventory normalization.
-- Reverse inventory mode: stock is imported first, physical placement can be assigned later.
-- Row-level error collection instead of aborting the entire import.
-- Tenant-scoped imported records.
-
-### Unified Inbox backend
-- Normalized inbound message model.
-- Inbound deduplication by channel + external message ID.
-- Tenant-scoped message persistence.
-- Outbound queue with request idempotency.
-- Protection against double sending.
-- Delivery states, retry/backoff and terminal failure.
-- Inbox events and audit.
-
-### Channel runtime
-- Common channel-adapter contract and registry.
-- Normalized webhook contract.
-- Polling contract with cursor support.
-- Outbound dispatch through adapters.
-- EINEIRO Market has a working native adapter for messages and publication persistence.
-- Avito has a real messenger adapter using the verified token endpoint and messenger API paths.
-- Avito adapter supports token caching/refresh, chat listing, message reading, polling and text-message sending.
-- Channel connection check performs a real Avito API call and records success/error state.
-- VK, Youla, Drom, Farpost, Auto.ru and Zzap remain explicitly unconfigured until official endpoints/credentials are verified.
-
-### Secure channel configuration
-- Per-company channel connection records.
-- AES-256-GCM encryption for external channel credentials using `EINEIRO_SECRET_KEY`.
-- Stored credentials are never returned by list/read endpoints.
-- Connection state tracks configured/enabled/status/last check/last success/last error.
-- Protected routes for listing, saving, disabling and checking channel connections.
-
-### Marketplace transactions, payments and logistics
-- Tenant-scoped orders and normalized items/totals.
-- Order lifecycle: created -> accepted -> packing -> shipped -> delivered / returned / cancelled.
-- Illegal transition protection.
-- Provider-neutral payment registry with idempotent creation, synchronization and refunds.
-- Provider-neutral logistics registry with shipment creation, tracking, history and cancellation.
-
-### Reliability and background work
-- Persistent job queue stored in the main data store; unfinished jobs survive server restarts.
-- Typed handlers with delayed execution, retry/backoff, max-attempt failure handling and idempotency keys.
-- Background runtime starts with the server and runs automatically without user login.
-- Default backup schedule is twice monthly (1st and 15th at 03:00 UTC) per company.
-- File-storage backups with metadata, retention pruning and restore.
-- PostgreSQL full-platform backups use native `pg_dump`, integrity listing via `pg_restore --list` and restore via `pg_restore`.
-- Isolated per-company backups export users, tenant records, audit and events with SHA-256 integrity verification and targeted restore.
-- Metrics registry, health registry and protected reliability endpoints are restored.
+### Payments / logistics / reliability
+- Provider-neutral payments/refunds and shipment/tracking contracts.
+- Persistent jobs, retries/backoff/idempotency.
+- Background runtime and twice-monthly company backup schedule.
+- PostgreSQL platform backup/verification/restore and isolated per-company backup/restore.
+- Metrics and health foundations.
 
 ## Still pending for true production operation
-- Pixel-level redaction for faces/license plates before external AI calls.
-- Live verification using real Avito credentials on the deployment host; the adapter and verified contract are implemented.
-- Verified real adapters and credentials/webhooks for VK, Youla, Drom, Farpost, Auto.ru and Zzap.
-- Production acquiring-provider credentials and webhook wiring.
-- Production transport-company credentials/API wiring.
-- OAuth authorization flow for third-party integrations; scoped API keys already exist.
-- External queue backend for multi-server horizontal scaling; persistent single-database queue exists.
-- External metrics/log storage and alert delivery.
-- Off-host backup replication and automated disaster-recovery drills; local PostgreSQL and per-company backup/verification exist.
-- Production-scale external search index when in-process Product Graph search no longer meets load requirements.
-- Mobile application packaging and store publication pipeline.
-- Full production runtime verification of the newest canonical Business/Admin surfaces on the deployment host.
+- Full Control Plane sections and actions.
+- Wire every autonomous contour to the common Autonomy Orchestrator rather than only providing the shared governance layer.
+- Full Category Schema versioning and moderation policies across all categories.
+- Production-ready Recommendation Engine separation and Offer-first Market rendering end-to-end.
+- Production acquiring credentials/webhooks.
+- Production fulfillment/logistics operator connectors and settlement.
+- Real external channel publishing adapters beyond verified messenger capabilities.
+- Pixel-level privacy redaction before external AI calls.
+- OAuth flows for third-party integrations.
+- External multi-server queue/metrics/log/alert infrastructure.
+- Off-host backup replication and DR drills.
+- Production-scale external search index when required.
+- Mobile application packaging/store pipeline.
+- Runtime verification of the newest canonical Business/Admin/Market on deployment host.
 
 ## Rule for future work
-- `EINEIRO_CANONICAL.md` is the product authority.
+- `EINEIRO_CANONICAL.md` and accepted Library specifications are product authority; newer accepted decisions override older drafts.
 - No chat statement counts as implementation. Every completed feature must have a Git commit.
-- Every production-critical feature also requires tests or runtime verification before being marked production-ready.
-- Do not resurrect old EP Base behavior into the universal product unless it is intentionally isolated as a domain module.
+- Production-critical features require tests or runtime verification.
+- Do not resurrect old EP Base behavior into Universal Core unless intentionally isolated as a domain module.
