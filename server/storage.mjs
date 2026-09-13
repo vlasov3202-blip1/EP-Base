@@ -18,12 +18,12 @@ export class JsonFileStore{
   getSession(id){const s=this.db.sessions[id];return s?structuredClone(s):null;}
   async removeSession(id){delete this.db.sessions[id];await this.flush();}
   async appendAudit(event){this.db.audit.push(structuredClone(event));await this.flush();}
-  listAudit(companyId){return this.db.audit.filter(x=>x.companyId===companyId).map(structuredClone);}
+  listAudit(companyId){return this.db.audit.filter(x=>x.companyId===companyId).map(value=>structuredClone(value));}
   async appendEvent(event){this.db.events.push(structuredClone(event));await this.flush();}
-  listEvents(companyId){return this.db.events.filter(x=>x.companyId===companyId).map(structuredClone);}
-  listAllApiKeys(){return Object.values(this.db.records||{}).filter(x=>x&&x.hash&&x.companyId&&x.id).map(structuredClone);}
+  listEvents(companyId){return this.db.events.filter(x=>x.companyId===companyId).map(value=>structuredClone(value));}
+  listAllApiKeys(){return Object.values(this.db.records||{}).filter(x=>x&&x.hash&&x.companyId&&x.id).map(value=>structuredClone(value));}
   listCompanyIds(){const ids=new Set();for(const u of Object.values(this.db.users||{}))if(u?.companyId)ids.add(u.companyId);for(const r of Object.values(this.db.records||{}))if(r?.companyId)ids.add(r.companyId);return [...ids].sort();}
-  exportCompany(companyId){const records=Object.values(this.db.records||{}).filter(x=>x?.companyId===companyId).map(structuredClone);const users=Object.values(this.db.users||{}).filter(x=>x?.companyId===companyId).map(structuredClone);return {companyId,users,records,audit:this.listAudit(companyId),events:this.listEvents(companyId),exportedAt:new Date().toISOString()};}
+  exportCompany(companyId){const records=Object.values(this.db.records||{}).filter(x=>x?.companyId===companyId).map(value=>structuredClone(value));const users=Object.values(this.db.users||{}).filter(x=>x?.companyId===companyId).map(value=>structuredClone(value));return {companyId,users,records,audit:this.listAudit(companyId),events:this.listEvents(companyId),exportedAt:new Date().toISOString()};}
 }
 
 export class DurableTenantRepository{
