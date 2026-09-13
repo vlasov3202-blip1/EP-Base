@@ -10,11 +10,14 @@ Status source of truth after repository-history loss. A feature is considered **
 - Market home has no product matrix before a user request.
 - Camera safe zone is immutable and may not be covered, moved, reduced or reused.
 - Camera/voice is the primary Market request interface.
-- Spatial camera shortlist is adaptive: 1, 2 or 3 top candidates may be shown simultaneously depending on confidence/relevance separation.
-- The relevant catalog is NOT limited to 3 products. It contains all genuinely relevant results, paginated/lazy-loaded as needed (up to 100 per page in the current contract, with no artificial total-result cap).
-- Any relevant catalog product can replace the currently placed product while preserving its spatial anchor/position.
-- Spatial anchor persists when replacing a product.
-- Clean View hides UI but keeps the placed product visible.
+- A user request is decomposed into **scene slots / requested objects**, not into a fixed number of product candidates.
+- One requested object equals one object placed in the scene. Example: “полка, на которой стоит ваза и книга” = 3 slots: one shelf + one vase + one book.
+- Each scene slot has exactly one currently selected/placed product at a time.
+- Each scene slot has its **own full relevant catalog of variants**. The catalog is not limited to 3 products and may contain any number of genuinely relevant variants; current contract supports up to 100 per page with pagination/lazy loading and no artificial total cap.
+- Selecting another variant replaces only that slot’s product and preserves that slot’s spatial anchor/relationship.
+- Variants must never be represented as duplicate scene objects. Three shelf variants do not mean three shelves in the scene.
+- The number of scene objects is driven only by the user’s intent/context, not by a UI cap.
+- Clean View hides UI but keeps all placed scene objects visible.
 - Mobile/tablet/desktop layouts are adaptive, not simple scaled copies.
 
 ## Restored in Git
@@ -42,13 +45,14 @@ Status source of truth after repository-history loss. A feature is considered **
 - Camera-first entry
 - Real browser camera via getUserMedia when permission/device allow it
 - Voice request via SpeechRecognition where supported
-- Context classification into scene/category
-- Adaptive 1–3 spatial candidates for immediate in-camera comparison
-- Full relevant catalog after request, separate from the spatial shortlist
-- Relevant catalog supports large result sets and selection of any result for placement/replacement
-- Place/replace product in scene while preserving the spatial placement concept
-- Clean View
-- Category-aware scene switching
+- Request decomposition into independent scene slots
+- One selected product per requested scene object
+- Multi-object composition: e.g. shelf + vase + book appear simultaneously as three different objects, not variants
+- Independent full variant catalog per scene slot
+- Replace-in-place for a slot while preserving its anchor
+- No artificial cap on total relevant variants per slot; paginated/lazy-loaded catalog contract
+- Clean View keeps all placed products visible
+- Context-aware scene switching
 
 ### Admin
 - Platform-control surface
@@ -139,7 +143,7 @@ Status source of truth after repository-history loss. A feature is considered **
 ### Multimodal Vision backend
 - Provider-neutral VisionSearchService
 - OpenAI Responses API gateway with image input
-- Structured Outputs JSON Schema for product-search intent
+- Structured Outputs JSON Schema for **requested object / scene-slot decomposition**
 - `store:false` requests
 - Configurable model via `OPENAI_MODEL`; model name is not exposed in product UI
 - Frame sampling with bounded frame count and minimum frame gap
@@ -147,10 +151,12 @@ Status source of truth after repository-history loss. A feature is considered **
 - Voice/context length limiting
 - Explicit instruction to ignore personal identifiers and focus on product-relevant context
 - Confidence gate: low-confidence requests return one clarification instead of product search
-- Full relevant catalog contract with pagination / up to 100 results per page and no artificial total cap
-- Adaptive spatial shortlist derived from the highest-relevance catalog results (1–3 simultaneous candidates)
+- Each requested object produces one scene slot and one independent search query
+- Each slot receives one current top offer plus its own full relevant variant catalog
+- Full per-slot catalog supports pagination / up to 100 results per page and no artificial total cap
+- Variants do not create duplicate scene objects
 - Tenant-scoped audit/events for vision resolution
-- Automated frame/minimization/confidence/full-catalog/spatial-shortlist tests wired into `npm run check`
+- Automated tests for shelf + vase + book decomposition, independent catalogs, current-offer selection, minimization and confidence gating
 
 ## Required production restoration still pending
 These were part of the agreed product but still need runtime/provider implementation:
@@ -163,7 +169,7 @@ These were part of the agreed product but still need runtime/provider implementa
 - Production transport-company provider credentials/API wiring; logistics contract/service exists
 - Import/migration center for external CRM CSV/XML
 - Product Graph / universal category schema persistence
-- Production search/recommendation index behind the restored full-catalog search contract
+- Production search/recommendation index behind the restored per-slot catalog search contract
 - Queues/workers beyond inbox delivery dispatch
 - Observability/health metrics
 - Automated per-company/platform backups and disaster recovery
