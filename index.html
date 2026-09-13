@@ -23,7 +23,7 @@
       const surface = preview || (host.startsWith('admin.') ? 'admin' : host.startsWith('business.') || host.startsWith('cabinet.') ? 'business' : 'market');
       document.title = surface === 'market' ? 'EINEIRO Market' : surface === 'admin' ? 'EINEIRO Admin' : 'EINEIRO Business';
       if (surface === 'business') {
-        await import('./app.js');
+        await import('./eineiro-business.js');
         await import('./business-addons.js');
         await import('./business-recovery.js');
         await import('./dashboard-layout.js');
