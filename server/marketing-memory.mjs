@@ -1,0 +1,9 @@
+import crypto from 'node:crypto';
+
+export class MarketingMemoryService{
+  constructor({repoFactory,now=()=>new Date()}={}){if(typeof repoFactory!=='function')throw new Error('repoFactory required');this.repoFactory=repoFactory;this.now=now;}
+  async remember(ctx,{campaignId,testId,creativeId,channel,audience={},variables={},controlGroup=false,metrics={},result='unknown',lesson=''}={}){const rec={id:`mm_${crypto.randomUUID()}`,campaignId,testId,creativeId,channel,audience:structuredClone(audience),variables:structuredClone(variables),controlGroup:Boolean(controlGroup),metrics:structuredClone(metrics),result,lesson,createdAt:this.now().toISOString()};await this.repoFactory(ctx).put('MarketingMemory',rec);return rec;}
+  async similar(ctx,{channel=null,audience={},variables={},limit=20}={}){const rows=await this.repoFactory(ctx).list('MarketingMemory');return rows.map(x=>({row:x,score:similarity(x,{channel,audience,variables})})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,limit).map(x=>({...x.row,similarity:x.score}));}
+  async nextExperiment(ctx,{campaignId,channel,baselineCreativeId,candidateCreativeId,variable,controlShare=0.2}={}){if(!variable)throw new Error('one variable required');const rec={id:`experiment_${crypto.randomUUID()}`,campaignId,channel,baselineCreativeId,candidateCreativeId,changedVariables:[variable],controlShare:Math.max(.05,Math.min(.5,Number(controlShare)||.2)),status:'planned',createdAt:this.now().toISOString()};await this.repoFactory(ctx).put('MarketingExperiment',rec);return rec;}
+}
+function similarity(x,q){let s=0;if(q.channel&&x.channel===q.channel)s+=40;for(const [k,v] of Object.entries(q.audience||{}))if(x.audience?.[k]===v)s+=10;for(const [k,v] of Object.entries(q.variables||{}))if(x.variables?.[k]===v)s+=10;return Math.min(100,s)}
