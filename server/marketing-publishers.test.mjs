@@ -4,7 +4,8 @@ import {MarketingPublisherRegistry,EineiroMarketMarketingPublisher} from './mark
 import {MarketingAutopilotService} from './marketing-autopilot.mjs';
 const ctx={companyId:'c1',userId:'owner',role:'owner'};const repo=new MemoryRepository();const wrap={put:(e,r)=>repo.put(ctx,e,r),get:(e,id)=>repo.get(ctx,e,id),list:e=>repo.list(ctx,e)};
 const registry=new MarketingPublisherRegistry().register('eineiro_market',new EineiroMarketMarketingPublisher({repoFactory:()=>wrap}));
-const svc=new MarketingAutopilotService({repoFactory:()=>wrap,publisherRegistry:registry,now:()=>new Date('2026-09-13T12:00:00Z')});
+let n=0;const creativeGenerator=async()=>({headline:`Тест ${++n}`,text:'Описание',cta:'Открыть',visualPrompt:'визуал',assetUrl:`https://assets.test/${n}.jpg`,format:'image',renderStatus:'ready'});
+const svc=new MarketingAutopilotService({repoFactory:()=>wrap,publisherRegistry:registry,creativeGenerator,now:()=>new Date('2026-09-13T12:00:00Z')});
 const c=await svc.createCampaign(ctx,{channels:['eineiro_market'],products:['P1'],dailyBudget:1000});const cr=await svc.generateCreatives(ctx,{campaignId:c.id,count:2});const t=await svc.launchTest(ctx,{campaignId:c.id,creativeIds:cr.map(x=>x.id),channel:'eineiro_market',budget:600,placement:'showcase'});assert.equal(repo.list(ctx,'MarketplacePlacement').length,2);
 await svc.recordMetrics(ctx,{testId:t.id,creativeId:cr[0].id,impressions:1000,clicks:100,orders:10,revenue:20000,spend:500});await svc.recordMetrics(ctx,{testId:t.id,creativeId:cr[1].id,impressions:1000,clicks:10,orders:0,revenue:0,spend:500});const out=await svc.optimize(ctx,{testId:t.id,autoApply:true});assert.equal(out.status,'optimized');assert.ok(repo.list(ctx,'MarketplacePlacement').some(x=>x.status==='paused'));assert.ok(repo.list(ctx,'MarketplacePlacement').length>=3);
 console.log('EINEIRO marketing publishers tests: OK');
