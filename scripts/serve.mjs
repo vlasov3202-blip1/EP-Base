@@ -6,6 +6,7 @@ import { handlePlatformApi } from '../server/http-api.mjs';
 import { handleChannelApi } from '../server/channel-api.mjs';
 import { handleInboxApi } from '../server/inbox-api.mjs';
 import { handleMarketingApi } from '../server/marketing-api.mjs';
+import { handlePromotionApi } from '../server/promotion-api.mjs';
 import { handleReliabilityApi } from '../server/reliability-api.mjs';
 import { handleBrowserSession } from '../server/browser-session.mjs';
 import { handleAdminApi } from '../server/admin-api.mjs';
@@ -28,6 +29,8 @@ createServer(async (request, response) => {
       if (inboxHandled !== false) return;
       const marketingHandled = await handleMarketingApi(request, response);
       if (marketingHandled !== false) return;
+      const promotionHandled = await handlePromotionApi(request, response);
+      if (promotionHandled !== false) return;
       const reliabilityHandled = await handleReliabilityApi(request, response);
       if (reliabilityHandled !== false) return;
       const channelHandled = await handleChannelApi(request, response);
