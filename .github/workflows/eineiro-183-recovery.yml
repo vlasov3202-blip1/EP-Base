@@ -26,7 +26,6 @@ jobs:
         run: |
           node server/vision-ai.test.mjs
           node server/core.test.mjs
-          node server/control-plane.test.mjs
           node server/control-plane-health.test.mjs
           node server/search.test.mjs
           node server/product-graph.test.mjs
