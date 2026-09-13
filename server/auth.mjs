@@ -22,21 +22,21 @@ export class AuthService{
   constructor(store,{sessionTtlMs=1000*60*60*24*14}={}){this.store=store;this.sessionTtlMs=sessionTtlMs;}
   async register({companyId,userId,email,password,role='seller',name=''}){
     const normalized=normalizeEmail(email);if(!companyId||!userId||!normalized)throw new Error('companyId/userId/email required');
-    if(this.store.findUserByEmail(companyId,normalized))throw Object.assign(new Error('email exists'),{code:'EMAIL_EXISTS'});
+    if(await this.store.findUserByEmail(companyId,normalized))throw Object.assign(new Error('email exists'),{code:'EMAIL_EXISTS'});
     const passwordHash=hashPassword(password);
     return this.store.putUser({id:userId,companyId,email:normalized,name,role,passwordHash,active:true,createdAt:new Date().toISOString()});
   }
   async login({companyId,email,password}){
-    const user=this.store.findUserByEmail(companyId,normalizeEmail(email));
+    const user=await this.store.findUserByEmail(companyId,normalizeEmail(email));
     if(!user||!user.active||!verifyPassword(password,user.passwordHash))throw Object.assign(new Error('invalid credentials'),{code:'INVALID_CREDENTIALS'});
     const session={id:crypto.randomBytes(32).toString('base64url'),companyId:user.companyId,userId:user.id,role:user.role,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+this.sessionTtlMs).toISOString(),lastSeenAt:new Date().toISOString()};
     await this.store.putSession(session);return {token:session.id,session:structuredClone(session),user:sanitizeUser(user)};
   }
   async authenticate(token){
-    const session=this.store.getSession(String(token||''));
+    const session=await this.store.getSession(String(token||''));
     if(!session)throw Object.assign(new Error('invalid session'),{code:'AUTH_REQUIRED'});
     if(Date.parse(session.expiresAt)<=Date.now()){await this.store.removeSession(session.id);throw Object.assign(new Error('session expired'),{code:'SESSION_EXPIRED'});}
-    const user=this.store.getUser(session.companyId,session.userId);
+    const user=await this.store.getUser(session.companyId,session.userId);
     if(!user?.active)throw Object.assign(new Error('user inactive'),{code:'USER_INACTIVE'});
     return {userId:user.id,companyId:user.companyId,role:user.role,sessionId:session.id,user:sanitizeUser(user)};
   }
