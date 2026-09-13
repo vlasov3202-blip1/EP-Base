@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import {AuthService} from './auth.mjs';
 import {assertCan} from './core.mjs';
 import {ApiKeyService} from './api-keys.mjs';
@@ -50,7 +51,7 @@ export async function handlePlatformApi(req,res){
     try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:read'});adminOnly(ctx);return finish(200,{metrics:rt.infra.metrics.snapshot(),queue:rt.infra.queue.stats()});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'METRICS_FORBIDDEN'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/auth/register'){
-    try{const p=await body(req);const user=await rt.auth.register(p);return finish(201,{user});}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'REGISTER_ERROR'})}
+    try{const p=await body(req);if(!p.email||!p.password)throw Object.assign(new Error('email/password required'),{status:400,code:'REGISTER_FIELDS_REQUIRED'});const companyId=`company_${crypto.randomUUID()}`,userId=`user_${crypto.randomUUID()}`;const user=await rt.auth.register({companyId,userId,email:p.email,password:p.password,name:p.name||'',role:'owner'});return finish(201,{user,companyId,role:'owner'});}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'REGISTER_ERROR'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/auth/login'){
     try{const p=await body(req);const out=await rt.auth.login(p);return finish(200,out);}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'LOGIN_ERROR'})}
