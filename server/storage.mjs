@@ -3,31 +3,13 @@ import path from 'node:path';
 import {tenantKey} from './core.mjs';
 
 export const CURRENT_SCHEMA_VERSION=2;
-
-export const migrations=[
-  {version:1,up(db){db.meta={...(db.meta||{}),schemaVersion:1,createdAt:db.meta?.createdAt||new Date().toISOString()};db.records=db.records||{};return db;}},
-  {version:2,up(db){db.meta.schemaVersion=2;db.sessions=db.sessions||{};db.users=db.users||{};db.audit=db.audit||[];db.events=db.events||[];return db;}}
-];
-
-export function migrateDatabase(input={}){
-  let db=structuredClone(input||{});
-  const from=Number(db.meta?.schemaVersion||0);
-  for(const migration of migrations.filter(m=>m.version>from).sort((a,b)=>a.version-b.version)) db=migration.up(db);
-  return db;
-}
+export const migrations=[{version:1,up(db){db.meta={...(db.meta||{}),schemaVersion:1,createdAt:db.meta?.createdAt||new Date().toISOString()};db.records=db.records||{};return db;}},{version:2,up(db){db.meta.schemaVersion=2;db.sessions=db.sessions||{};db.users=db.users||{};db.audit=db.audit||[];db.events=db.events||[];return db;}}];
+export function migrateDatabase(input={}){let db=structuredClone(input||{});const from=Number(db.meta?.schemaVersion||0);for(const migration of migrations.filter(m=>m.version>from).sort((a,b)=>a.version-b.version))db=migration.up(db);return db;}
 
 export class JsonFileStore{
   constructor(filePath){this.filePath=filePath;this.db=null;this.writeQueue=Promise.resolve();}
-  async init(){
-    await mkdir(path.dirname(this.filePath),{recursive:true});
-    try{this.db=migrateDatabase(JSON.parse(await readFile(this.filePath,'utf8')));}catch(err){if(err.code!=='ENOENT')throw err;this.db=migrateDatabase({});}
-    await this.flush();return this;
-  }
-  async flush(){
-    const snapshot=JSON.stringify(this.db,null,2);const tmp=`${this.filePath}.tmp`;
-    this.writeQueue=this.writeQueue.then(async()=>{await writeFile(tmp,snapshot,{mode:0o600});await rename(tmp,this.filePath);});
-    await this.writeQueue;
-  }
+  async init(){await mkdir(path.dirname(this.filePath),{recursive:true});try{this.db=migrateDatabase(JSON.parse(await readFile(this.filePath,'utf8')));}catch(err){if(err.code!=='ENOENT')throw err;this.db=migrateDatabase({});}await this.flush();return this;}
+  async flush(){const snapshot=JSON.stringify(this.db,null,2);const tmp=`${this.filePath}.tmp`;this.writeQueue=this.writeQueue.then(async()=>{await writeFile(tmp,snapshot,{mode:0o600});await rename(tmp,this.filePath);});await this.writeQueue;}
   tenant(ctx){if(!ctx?.companyId)throw new Error('companyId required');return new DurableTenantRepository(this,ctx.companyId);}
   async putUser(user){if(!user?.id||!user?.companyId)throw new Error('user id/companyId required');this.db.users[`${user.companyId}:${user.id}`]=structuredClone(user);await this.flush();return structuredClone(user);}
   getUser(companyId,userId){const user=this.db.users[`${companyId}:${userId}`];return user?structuredClone(user):null;}
@@ -41,6 +23,7 @@ export class JsonFileStore{
   listEvents(companyId){return this.db.events.filter(x=>x.companyId===companyId).map(structuredClone);}
   listAllApiKeys(){return Object.values(this.db.records||{}).filter(x=>x&&x.hash&&x.companyId&&x.id).map(structuredClone);}
   listCompanyIds(){const ids=new Set();for(const u of Object.values(this.db.users||{}))if(u?.companyId)ids.add(u.companyId);for(const r of Object.values(this.db.records||{}))if(r?.companyId)ids.add(r.companyId);return [...ids].sort();}
+  exportCompany(companyId){const records=Object.values(this.db.records||{}).filter(x=>x?.companyId===companyId).map(structuredClone);const users=Object.values(this.db.users||{}).filter(x=>x?.companyId===companyId).map(structuredClone);return {companyId,users,records,audit:this.listAudit(companyId),events:this.listEvents(companyId),exportedAt:new Date().toISOString()};}
 }
 
 export class DurableTenantRepository{
