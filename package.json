@@ -1,12 +1,12 @@
 {
   "name": "eineiro-platform",
-  "version": "0.5.0-recovery",
+  "version": "0.6.0-recovery",
   "private": true,
   "description": "EINEIRO universal commerce platform recovery build",
   "type": "module",
   "scripts": {
     "dev": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
-    "check": "node --check app.js && node --check market.js && node --check admin.js && node --check business-addons.js && node --check platform-core.js && node server/core.test.mjs && node server/auth-storage.test.mjs && node scripts/check.mjs"
+    "check": "node --check app.js && node --check market.js && node --check admin.js && node --check business-addons.js && node --check platform-core.js && node server/core.test.mjs && node server/auth-storage.test.mjs && node server/inbox.test.mjs && node scripts/check.mjs"
   }
 }
