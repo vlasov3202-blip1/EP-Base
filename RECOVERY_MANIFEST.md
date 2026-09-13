@@ -144,14 +144,18 @@ This file is the source of truth after repository-history loss. A feature is con
 - Polling contract with cursor support.
 - Outbound dispatch through adapters.
 - EINEIRO Market has a working native adapter for messages and publication persistence.
-- Avito, VK, Youla, Drom, Farpost, Auto.ru and Zzap remain explicitly unconfigured until official endpoints/credentials are verified; they no longer pretend to be operational.
+- Avito has a real messenger adapter using the verified Avito token endpoint and messenger API paths.
+- Avito adapter supports token caching/refresh on expiry or 401, chat listing, message reading, polling and text-message sending.
+- Channel connection check route performs a real Avito API call and records success/error state.
+- VK, Youla, Drom, Farpost, Auto.ru and Zzap remain explicitly unconfigured until their official endpoints/credentials are verified; they do not pretend to be operational.
+- Automated Avito adapter tests use mocked network calls and verify token reuse, reading and sending.
 
 ### Secure channel connection configuration
 - Per-company channel connection records.
 - AES-256-GCM encryption for external channel credentials using `EINEIRO_SECRET_KEY`.
 - Stored credentials are never returned by channel-list/read endpoints.
 - Connection state tracks configured/enabled/status/last check/last success/last error.
-- Protected routes for listing, saving and disabling channel connections.
+- Protected routes for listing, saving, disabling and checking channel connections.
 - Different companies cannot read each other's channel configuration.
 - Encryption and tenant-isolation checks are wired into the main test command.
 
@@ -178,34 +182,29 @@ This file is the source of truth after repository-history loss. A feature is con
 - Shipment history and cancellation contract.
 - Shipment events and audit.
 
-### Infrastructure and reliability
-- In-process job queue with typed handlers.
-- New durable tenant-scoped job queue backed by the configured data store.
-- Durable jobs keep status, attempts, retry time and results across server restarts.
-- Delayed jobs, exponential retry and max-attempt failure handling.
-- Automated persistence test proves a queued job remains available after reopening the data store.
+### Infrastructure
+- Persistent job queue stored in the main data store; unfinished jobs survive server restarts.
+- Typed worker handlers with delayed execution, retry/backoff and max-attempt failure handling.
+- Tenant-scoped job listing and queue statistics.
 - Metrics registry with counters, gauges and latency observations.
 - Health registry with component state.
 - Public lightweight health endpoint and protected metrics/queue endpoints.
 - File-storage backups with metadata, retention pruning and restore.
-- PostgreSQL backup service using `pg_dump` custom-format backups.
-- PostgreSQL backup verification using `pg_restore --list` before a copy is treated as valid.
-- PostgreSQL restore contract using `pg_restore`, with optional clean restore mode.
-- Backup retention pruning.
-- Separate protected reliability routes for durable jobs and PostgreSQL backup create/list/verify/restore.
-- The reliability routes are wired into the server before ordinary platform routes.
+- PostgreSQL backup service using native `pg_dump`, integrity listing through `pg_restore --list`, restore through `pg_restore`, retention pruning and protected administration routes.
+- PostgreSQL backup runtime requires the PostgreSQL command-line utilities to be installed on the deployment host.
+- Automated durable-queue restart test is wired into the main check command.
 
 ## Still pending for true production operation
 - Cookie-based browser sessions and CSRF policy.
 - Pixel-level redaction for faces/license plates before external AI calls.
-- Verified real adapters and credentials/webhooks for Avito, VK, Youla, Drom, Farpost, Auto.ru and Zzap.
+- Live verification using real Avito credentials on the deployment host; the adapter and verified API contract are implemented.
+- Verified real adapters and credentials/webhooks for VK, Youla, Drom, Farpost, Auto.ru and Zzap.
 - Production acquiring-provider credentials and webhook wiring.
 - Production transport-company credentials/API wiring.
 - OAuth authorization flow for third-party integrations; scoped API keys already exist.
-- External multi-node task queue when horizontal scaling becomes necessary; durable single-database queue now exists.
+- External queue backend for multi-server horizontal scaling; persistent single-database queue exists.
 - External metrics/log storage and alert delivery.
-- Off-host/object-storage replication of PostgreSQL backup files and scheduled disaster-recovery drills.
-- Production server must have `pg_dump` and `pg_restore` installed; repository code cannot verify their presence until deployment runtime is available.
+- Off-host backup replication and automated disaster-recovery drills; local PostgreSQL backup/verification exists.
 - Production-scale external search index when in-process Product Graph search no longer meets load requirements.
 - Mobile application packaging and store publication pipeline.
 
