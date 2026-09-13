@@ -132,18 +132,33 @@ Status source of truth after repository-history loss. A feature is considered **
 - Shipment audit + event emission
 - Automated payments/logistics tests wired into `npm run check`
 
+### Multimodal Vision backend
+- Provider-neutral VisionSearchService
+- OpenAI Responses API gateway with image input
+- Structured Outputs JSON Schema for product-search intent
+- `store:false` requests
+- Configurable model via `OPENAI_MODEL`; model name is not exposed in product UI
+- Frame sampling with bounded frame count and minimum frame gap
+- Metadata minimization before frames leave the trusted boundary
+- Voice/context length limiting
+- Explicit instruction to ignore personal identifiers and focus on product-relevant context
+- Confidence gate: low-confidence requests return one clarification instead of product search
+- Search service contract with maximum 3 returned offers
+- Tenant-scoped audit/events for vision resolution
+- Automated frame/minimization/confidence/search-limit tests wired into `npm run check`
+
 ## Required production restoration still pending
 These were part of the agreed product but still need runtime/provider implementation:
 - Production database adapter (PostgreSQL or equivalent) and deployment migrations; durable provider-neutral adapter exists
 - HTTP/API authentication middleware and cookie/header transport; session service exists
-- Real OpenAI multimodal gateway and provider abstraction runtime
-- Vision frame sampling/anonymization pipeline
+- Pixel-level redaction provider for faces/license plates before external AI calls; metadata minimization hook exists
+- Market HTTP/API bridge from browser camera to VisionSearchService
 - Real Avito/Drom/Farpost/Auto.ru/VK/Youla/Zzap provider adapters and credentials/webhook wiring; contracts/runtime now exist
 - Production acquiring provider credentials/webhook wiring; payment contract/service exists
 - Production transport-company provider credentials/API wiring; logistics contract/service exists
 - Import/migration center for external CRM CSV/XML
 - Product Graph / universal category schema persistence
-- Search/recommendation service
+- Search/recommendation service implementation behind the Vision search contract
 - Queues/workers beyond inbox delivery dispatch
 - Observability/health metrics
 - Automated per-company/platform backups and disaster recovery
