@@ -1,548 +1,90 @@
-const STORAGE_KEY = 'ep-base-mvp-v1';
+const STORAGE_KEY='eineiro-core-v1';
+const OLD_KEY='ep-base-mvp-v1';
+const $=(s,r=document)=>r.querySelector(s);
+const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+const money=v=>`${new Intl.NumberFormat('ru-RU').format(Math.round(Number(v)||0))} ₽`;
+const now=()=>new Date().toISOString();
 
-const icons = {
-  dashboard: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-  car: '<path d="M5 17h14l-1.2-5.1A2.5 2.5 0 0 0 15.4 10H8.6a2.5 2.5 0 0 0-2.4 1.9L5 17Z"/><path d="m7 10 1.2-3h7.6l1.2 3M5 17v2M19 17v2M7.5 14h.01M16.5 14h.01"/>',
-  package: '<path d="m21 8-9 5-9-5 9-5 9 5Z"/><path d="m3 8 9 5 9-5v8l-9 5-9-5V8Z"/><path d="M12 13v8"/>',
-  warehouse: '<path d="M3 21V8l9-5 9 5v13"/><path d="M7 21v-9h10v9M7 15h10M10 12v9M14 12v9"/>',
-  finance: '<path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/>',
-  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
-  plus: '<path d="M12 5v14M5 12h14"/>',
-  arrow: '<path d="M5 12h14M14 7l5 5-5 5"/>',
-  wrench: '<path d="M14.7 6.3a4 4 0 0 0-5-5L12 3.6 9.6 6 7.3 3.7a4 4 0 0 0 5 5L4 17l3 3 7.7-8.3a4 4 0 0 0 0-5.4Z"/>',
-  receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
-  move: '<path d="M7 7h11l-3-3M17 17H6l3 3M18 7l-3 3M6 17l3-3"/>',
-  tasks: '<path d="m4 6 2 2 4-4M12 6h8M4 13l2 2 4-4M12 13h8M4 20l2 2 4-4M12 20h8"/>',
-  close: '<path d="m6 6 12 12M18 6 6 18"/>',
-  check: '<path d="m5 12 4 4L19 6"/>',
-  box: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/>',
-  upload: '<path d="M12 16V4M7 9l5-5 5 5M5 20h14"/>',
-};
+const icons={dashboard:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',package:'<path d="m21 8-9 5-9-5 9-5 9 5Z"/><path d="m3 8 9 5 9-5v8l-9 5-9-5V8Z"/><path d="M12 13v8"/>',warehouse:'<path d="M3 21V8l9-5 9 5v13"/><path d="M7 21v-9h10v9M7 15h10M10 12v9M14 12v9"/>',finance:'<path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/>',tasks:'<path d="m4 6 2 2 4-4M12 6h8M4 13l2 2 4-4M12 13h8M4 20l2 2 4-4M12 20h8"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',spark:'<path d="m12 2 1.7 5.1L19 9l-5.3 1.9L12 16l-1.7-5.1L5 9l5.3-1.9L12 2Z"/><path d="m19 15 .9 2.6L22.5 19l-2.6.9L19 22.5l-.9-2.6-2.6-.9 2.6-.9L19 15Z"/>',users:'<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 11a4 4 0 0 1 0 8"/>',price:'<path d="M12 2v20M17 6.5c0-2-2.2-3.5-5-3.5S7 4.5 7 6.5s2 3 5 3 5 1 5 3.5-2.2 4-5 4-5-1.5-5-4"/>',plug:'<path d="M8 2v5M16 2v5M6 7h12v3a6 6 0 0 1-12 0V7ZM12 16v6"/>',chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',check:'<path d="m5 12 4 4L19 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',alert:'<path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5M12 17h.01"/>',arrow:'<path d="M5 12h14M14 7l5 5-5 5"/>',chat:'<path d="M4 5h16v11H9l-5 4V5Z"/>'};
+const icon=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[n]||icons.dashboard}</svg>`;
 
-function icon(name) {
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.box}</svg>`;
-}
-
-const seedData = {
-  vehicles: [
-    { id: 'CAR-001', make: 'Hyundai', model: 'Solaris', year: 2017, color: 'Белый', vin: 'Z94K241CBHR•••431', stage: 72, parts: 42, cost: 465000, revenue: 538000 },
-    { id: 'CAR-002', make: 'Volkswagen', model: 'Polo', year: 2016, color: 'Серебристый', vin: 'XW8ZZZ61ZGG•••827', stage: 48, parts: 31, cost: 410000, revenue: 274000 },
-    { id: 'CAR-003', make: 'Ford', model: 'Focus III', year: 2013, color: 'Чёрный', vin: 'X9FMXXEEBMD•••184', stage: 89, parts: 56, cost: 350000, revenue: 611000 },
-    { id: 'CAR-004', make: 'Skoda', model: 'Rapid', year: 2018, color: 'Синий', vin: 'XW8AC6NH0JK•••596', stage: 24, parts: 18, cost: 530000, revenue: 92000 },
+const seed={
+  meta:{version:'recovery-1',autonomy:92,role:'owner',ai:true},
+  parts:[
+    {id:'EP-000125',name:'Двигатель G4FC 1.6',category:'Двигатель',price:185000,minPrice:169000,optimalPrice:189000,status:'listed',location:{zone:'A',rack:'01',shelf:'1',cell:'A'},age:11,demand:91},
+    {id:'EP-000124',name:'АКПП A6GF1',category:'Трансмиссия',price:98000,minPrice:91000,optimalPrice:103000,status:'ready',location:{zone:'A',rack:'02',shelf:'1',cell:'B'},age:18,demand:82},
+    {id:'EP-000123',name:'Бампер передний Polo',category:'Кузов',price:17500,minPrice:15800,optimalPrice:18200,status:'reserved',location:{zone:'B',rack:'03',shelf:'2',cell:'A'},age:39,demand:73},
+    {id:'EP-000122',name:'Фара правая Focus III',category:'Оптика',price:24300,minPrice:22900,optimalPrice:25900,status:'listed',location:{zone:'B',rack:'01',shelf:'3',cell:'C'},age:67,demand:88},
+    {id:'EP-000121',name:'Дверь передняя левая Rapid',category:'Кузов',price:22000,minPrice:19500,optimalPrice:23500,status:'removed',location:{zone:'C',rack:'02',shelf:'1',cell:'A'},age:104,demand:54}
   ],
-  parts: [
-    { id: 'EP-000125', name: 'Двигатель G4FC 1.6', vehicleId: 'CAR-001', category: 'Двигатель', price: 185000, status: 'listed', location: { zone: 'A', rack: '01', shelf: '1' }, addedAt: '2026-09-02T16:12:00Z' },
-    { id: 'EP-000124', name: 'АКПП A6GF1', vehicleId: 'CAR-001', category: 'Трансмиссия', price: 98000, status: 'ready', location: { zone: 'A', rack: '02', shelf: '1' }, addedAt: '2026-09-02T14:35:00Z' },
-    { id: 'EP-000123', name: 'Бампер передний', vehicleId: 'CAR-002', category: 'Кузов', price: 17500, status: 'reserved', location: { zone: 'B', rack: '03', shelf: '2' }, addedAt: '2026-09-01T18:20:00Z' },
-    { id: 'EP-000122', name: 'Фара правая ксенон', vehicleId: 'CAR-003', category: 'Оптика', price: 24300, status: 'listed', location: { zone: 'B', rack: '01', shelf: '3' }, addedAt: '2026-09-01T16:05:00Z' },
-    { id: 'EP-000121', name: 'Дверь передняя левая', vehicleId: 'CAR-004', category: 'Кузов', price: 22000, status: 'removed', location: { zone: 'C', rack: '02', shelf: '1' }, addedAt: '2026-09-01T13:41:00Z' },
-    { id: 'EP-000120', name: 'Блок ABS', vehicleId: 'CAR-002', category: 'Электрика', price: 13400, status: 'sold', location: { zone: 'A', rack: '04', shelf: '3' }, addedAt: '2026-08-31T12:00:00Z' },
-    { id: 'EP-000119', name: 'Капот', vehicleId: 'CAR-003', category: 'Кузов', price: 28500, status: 'listed', location: { zone: 'C', rack: '01', shelf: '1' }, addedAt: '2026-08-30T09:30:00Z' },
-    { id: 'EP-000118', name: 'Зеркало левое', vehicleId: 'CAR-004', category: 'Кузов', price: 8900, status: 'ready', location: { zone: 'B', rack: '02', shelf: '2' }, addedAt: '2026-08-29T17:11:00Z' },
-    { id: 'EP-000117', name: 'Компрессор кондиционера', vehicleId: 'CAR-001', category: 'Навесное', price: 14500, status: 'listed', location: { zone: 'A', rack: '03', shelf: '2' }, addedAt: '2026-08-29T12:52:00Z' },
-    { id: 'EP-000116', name: 'Магнитола штатная', vehicleId: 'CAR-002', category: 'Салон', price: 7500, status: 'sold', location: { zone: 'A', rack: '05', shelf: '4' }, addedAt: '2026-08-28T11:02:00Z' },
+  leads:[
+    {id:'L-1042',customer:'Илья · Avito',request:'Фара Focus III',firstResponse:3,status:'qualified',discount:2,assignee:'Антон',margin:31,followup:true},
+    {id:'L-1041',customer:'Максим · Market',request:'АКПП A6GF1',firstResponse:7,status:'attention',discount:11,assignee:'Сергей',margin:18,followup:false},
+    {id:'L-1040',customer:'Алексей · Drom',request:'Двигатель G4FC',firstResponse:2,status:'won',discount:4,assignee:'Антон',margin:37,followup:true},
+    {id:'L-1039',customer:'Роман · VK',request:'Бампер Polo',firstResponse:12,status:'attention',discount:14,assignee:'Сергей',margin:13,followup:false}
   ],
-  activities: [
-    { type: 'sale', title: 'Продан блок ABS', subtitle: 'Volkswagen Polo · 13 400 ₽', time: '18 мин' },
-    { type: 'part', title: 'Добавлен двигатель G4FC', subtitle: 'Hyundai Solaris · EP-000125', time: '1 ч' },
-    { type: 'move', title: 'Перемещён передний бампер', subtitle: 'На склад B-03-2', time: '3 ч' },
-    { type: 'sale', title: 'Продана штатная магнитола', subtitle: 'Volkswagen Polo · 7 500 ₽', time: 'вчера' },
+  tasks:[
+    {id:'T-31',title:'Сделать фото и опубликовать АКПП',owner:'Склад',priority:'high',status:'todo',source:'AI Dispatcher'},
+    {id:'T-30',title:'Проверить просроченный follow-up L-1041',owner:'Продажи',priority:'high',status:'todo',source:'AI-РОП'},
+    {id:'T-29',title:'Переместить залежавшуюся дверь в зону C-02',owner:'Склад',priority:'normal',status:'progress',source:'Warehouse AI'}
   ],
+  aiEvents:[
+    {time:'10:42',text:'Перераспределил 3 лида на менее загруженного продавца',impact:'+ SLA'},
+    {time:'10:18',text:'Вернул клиента автоматическим follow-up',impact:'+ 22 000 ₽'},
+    {time:'09:57',text:'Остановил скидку ниже минимальной маржи',impact:'+ 4 600 ₽'},
+    {time:'09:21',text:'Создал складскую задачу по залежавшемуся товару',impact:'авто'}
+  ],
+  exceptions:[
+    {id:'E-1',type:'margin',title:'Сделка ниже допустимой маржи',detail:'L-1041 · скидка 11%',severity:'bad'},
+    {id:'E-2',type:'sla',title:'Первый ответ выше SLA',detail:'L-1039 · 12 мин',severity:'warn'},
+    {id:'E-3',type:'warehouse',title:'Товар > 90 дней',detail:'EP-000121 · 104 дня',severity:'warn'}
+  ],
+  integrations:[
+    {name:'Avito',mode:'API',enabled:true,status:'online'},{name:'Drom / Farpost',mode:'feed/API',enabled:true,status:'online'},{name:'Auto.ru',mode:'feed',enabled:true,status:'online'},{name:'VK / Youla',mode:'API',enabled:false,status:'not configured'},{name:'Zzap',mode:'API',enabled:false,status:'not configured'},{name:'EINEIRO Market',mode:'native',enabled:true,status:'online'}
+  ],
+  finance:{income:538000,expenses:292000,mandatory:58000,optional:24000,cashflow:164000},
+  staff:[{name:'Антон',role:'seller',score:92,qualified:38,sales:17,response:3.1},{name:'Сергей',role:'seller',score:74,qualified:31,sales:10,response:7.8},{name:'Игорь',role:'warehouse',score:88,qualified:0,sales:0,response:0}],
+  suspicious:[{title:'Повторные максимальные скидки одному клиенту',count:2,risk:'medium'},{title:'Ручная цена вне диапазона Price Lab',count:1,risk:'high'}]
 };
 
-const statusLabels = {
-  removed: 'Снята',
-  ready: 'Подготовлена',
-  listed: 'Опубликована',
-  reserved: 'Забронирована',
-  sold: 'Продана',
-};
+function migrateOld(){try{const old=JSON.parse(localStorage.getItem(OLD_KEY)||'null');if(!old)return null;const d=structuredClone(seed);if(Array.isArray(old.parts)&&old.parts.length)d.parts=old.parts.map((p,i)=>({...p,minPrice:Math.round(p.price*.9),optimalPrice:Math.round(p.price*1.04),location:{...p.location,cell:p.location?.cell||'A'},age:10+i*9,demand:70+i%25}));return d}catch{return null}}
+function load(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||migrateOld()||structuredClone(seed)}catch{return structuredClone(seed)}}
+let data=load();
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(data))}
+let ui={view:'dashboard',filter:'all',modal:null};
 
-const navigation = [
-  { id: 'dashboard', label: 'Главная', short: 'Главная', icon: 'dashboard' },
-  { id: 'donors', label: 'Автомобили', short: 'Авто', icon: 'car' },
-  { id: 'parts', label: 'Запчасти', short: 'Детали', icon: 'package' },
-  { id: 'warehouse', label: 'Склад', short: 'Склад', icon: 'warehouse' },
-  { id: 'finance', label: 'Финансы', short: 'Деньги', icon: 'finance' },
-];
+const nav=[['dashboard','Главная','dashboard'],['sales','Продажи','users'],['tasks','Задачи','tasks'],['price','Price Lab','price'],['warehouse','Склад','warehouse'],['parts','Товары','package'],['analytics','Аналитика','chart'],['finance','Финансы','finance'],['integrations','Подключения','plug']];
+const titles={dashboard:['Главная','Управление по исключениям'],sales:['Продажи','AI-РОП и контроль SLA'],tasks:['Задачи','AI Dispatcher и исполнение'],price:['AI Price Lab','Цена, маржа и динамическое управление'],warehouse:['Склад','Зона → стеллаж → полка → ячейка'],parts:['Товары','Карточки, статусы и публикация'],analytics:['Аналитика','Стратегический контур и AI Director'],finance:['Финансы','Денежный поток и структура расходов'],integrations:['Центр подключений','Каналы продаж и API']};
 
-const pageCopy = {
-  dashboard: ['Главная', 'Сводка по Easy Parts'],
-  donors: ['Автомобили-доноры', 'Закупка, разбор и окупаемость'],
-  parts: ['Каталог запчастей', 'Все детали и их текущий статус'],
-  warehouse: ['Склад', 'Зоны, стеллажи и полки'],
-  finance: ['Финансы', 'Вложения, продажи и прибыль'],
-};
+function navMarkup(m=false){return nav.map(([id,label,ic])=>`<button class="nav-button ${ui.view===id?'active':''}" data-action="nav" data-view="${id}">${icon(ic)}<span>${m?label.slice(0,7):label}</span></button>`).join('')}
+function shell(){const [t,s]=titles[ui.view];return `<div class="shell"><aside class="sidebar"><div class="brand"><div class="brand-mark">E</div><div class="brand-copy"><strong>EINEIRO</strong><span>Business</span></div></div><div class="sidebar-label">Command center</div><nav class="nav">${navMarkup()}</nav><div class="sidebar-footer"><div class="eyebrow">AUTOPILOT</div><p>${data.meta.ai?'ИИ включён · управление по исключениям':'ИИ выключен · ручной режим'}</p></div></aside><main class="content"><header class="topbar"><div class="top-title"><h1>${t}</h1><p>${s}</p></div><div class="top-actions"><button class="core-btn ai" data-action="toggle-ai">${icon('spark')} ${data.meta.ai?'AI ON':'AI OFF'}</button></div></header><div id="view-root">${renderView()}</div></main></div><nav class="mobile-nav">${navMarkup(true)}</nav>${ui.modal?renderModal():''}`}
+function render(){document.querySelector('#app').innerHTML=shell()}
+function renderView(){return ({dashboard:dashboardView,sales:salesView,tasks:tasksView,price:priceView,warehouse:warehouseView,parts:partsView,analytics:analyticsView,finance:financeView,integrations:integrationsView}[ui.view]||dashboardView)()}
 
-function cloneSeed() {
-  return JSON.parse(JSON.stringify(seedData));
-}
+function dashboardView(){const bad=data.exceptions.length,open=data.tasks.filter(t=>t.status!=='done').length,unanswered=data.leads.filter(l=>l.firstResponse>5).length;return `<section class="view"><div class="core-card director"><div><span class="core-badge ai">${icon('spark')} AI DIRECTOR</span><h2>${bad?'Есть '+bad+' исключения. Остальное работает штатно.':'Вмешательство не требуется.'}</h2><p>EINEIRO скрывает нормальные процессы и поднимает только то, где решение владельца реально меняет результат.</p></div><div class="autonomy-ring" style="--p:${data.meta.autonomy}%"><div><strong>${data.meta.autonomy}%</strong><span>автономность</span></div></div></div><div class="core-grid cols-4" style="margin-top:14px"><article class="core-card"><span class="core-badge ${bad?'bad':'good'}">Исключения</span><div class="core-kpi">${bad}</div><div class="core-sub">требуют внимания</div></article><article class="core-card"><span class="core-badge good">SLA</span><div class="core-kpi">${unanswered}</div><div class="core-sub">лидов > 5 минут</div></article><article class="core-card"><span class="core-badge ai">AI</span><div class="core-kpi">${data.aiEvents.length}</div><div class="core-sub">автодействия сегодня</div></article><article class="core-card"><span class="core-badge warn">Задачи</span><div class="core-kpi">${open}</div><div class="core-sub">в работе</div></article></div><div class="core-grid cols-2" style="margin-top:14px"><article class="core-card"><div class="core-topline"><div><div class="eyebrow">ИСКЛЮЧЕНИЯ</div><h3>Нужно решение</h3></div><button class="core-btn" data-action="nav" data-view="tasks">Открыть</button></div><div class="exception-list">${data.exceptions.map(e=>`<div class="exception-row"><span class="core-badge ${e.severity}">${e.type}</span><div><div class="row-title">${esc(e.title)}</div><div class="row-meta">${esc(e.detail)}</div></div><button class="core-btn" data-action="resolve-exception" data-id="${e.id}">Решено</button></div>`).join('')}</div></article><article class="core-card"><div class="core-topline"><div><div class="eyebrow">EINEIRO СДЕЛАЛ</div><h3>Автоматические действия</h3></div></div><div class="ai-feed">${data.aiEvents.map(e=>`<div class="ai-event"><span class="core-badge ai">AI</span><div class="row-title">${esc(e.text)}</div><time>${e.time} · ${esc(e.impact)}</time></div>`).join('')}</div></article></div></section>`}
 
-function loadData() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : cloneSeed();
-  } catch {
-    return cloneSeed();
-  }
-}
+function salesView(){return `<section class="view"><div class="core-grid cols-4"><article class="core-card"><div class="eyebrow">SLA 1-й ответ</div><div class="core-kpi">≤ 5 мин</div><div class="core-sub">повторный ≤ 10 мин</div></article><article class="core-card"><div class="eyebrow">Необработанных</div><div class="core-kpi">0</div><div class="core-sub">цель системы</div></article><article class="core-card"><div class="eyebrow">Квалифицировано</div><div class="core-kpi">${data.leads.filter(l=>l.status==='qualified'||l.status==='won').length}</div><div class="core-sub">из ${data.leads.length} лидов</div></article><article class="core-card"><div class="eyebrow">Follow-up</div><div class="core-kpi">${data.leads.filter(l=>l.followup).length}/${data.leads.length}</div><div class="core-sub">под контролем AI</div></article></div><article class="core-card" style="margin-top:14px"><div class="core-topline"><div><div class="eyebrow">AI-РОП</div><h3>Входящие и качество обработки</h3></div><span class="core-badge good">управление по исключениям</span></div><div class="lead-list">${data.leads.map(l=>`<div class="lead-row"><div><div class="row-title">${esc(l.customer)}</div><div class="row-meta">${esc(l.request)} · ${esc(l.assignee)}</div></div><div><span class="sla ${l.firstResponse<=5?'good':l.firstResponse<=10?'warn':'bad'}">${l.firstResponse} мин</span><div class="row-meta">первый ответ</div></div><div><div class="row-title">-${l.discount}%</div><div class="row-meta">маржа ${l.margin}%</div></div><button class="core-btn ${l.followup?'':'ai'}" data-action="followup" data-id="${l.id}">${l.followup?'Follow-up ✓':'Вернуть клиента'}</button></div>`).join('')}</div></article><div class="core-grid cols-2" style="margin-top:14px"><article class="core-card"><div class="eyebrow">ОЦЕНКА ПРОДАВЦОВ</div><table class="mini-table"><thead><tr><th>Сотрудник</th><th>Квал. лиды</th><th>Продажи</th><th>Ответ</th><th>Score</th></tr></thead><tbody>${data.staff.filter(s=>s.role==='seller').map(s=>`<tr><td>${s.name}</td><td>${s.qualified}</td><td>${s.sales}</td><td>${s.response} мин</td><td><b>${s.score}</b></td></tr>`).join('')}</tbody></table></article><article class="core-card"><div class="eyebrow">ПОДОЗРИТЕЛЬНОЕ ПОВЕДЕНИЕ</div>${data.suspicious.map(s=>`<div class="exception-row"><span class="core-badge ${s.risk==='high'?'bad':'warn'}">${s.count}</span><div class="row-title">${esc(s.title)}</div><button class="core-btn">Проверить</button></div>`).join('')}</article></div></section>`}
 
-function saveData() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // The interface still works if private browsing blocks storage.
-  }
-}
+function tasksView(){return `<section class="view"><div class="core-topline"><div><span class="core-badge ai">AI DISPATCHER</span><h3>Задачи создаются из отклонений и назначаются по роли/нагрузке</h3></div><button class="core-btn primary" data-action="new-task">${icon('plus')} Задача</button></div><div class="task-board">${data.tasks.map(t=>`<div class="task-row"><span class="core-badge ${t.priority==='high'?'bad':'warn'}">${t.priority==='high'?'срочно':'обычно'}</span><div><div class="row-title">${esc(t.title)}</div><div class="row-meta">${esc(t.source)} · ${esc(t.owner)}</div></div><span class="core-badge ${t.status==='done'?'good':t.status==='progress'?'ai':'warn'}">${t.status==='done'?'готово':t.status==='progress'?'в работе':'принять'}</span><button class="core-btn" data-action="cycle-task" data-id="${t.id}">Следующий статус</button></div>`).join('')}</div></section>`}
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
+function priceView(){return `<section class="view"><div class="core-card"><div class="core-topline"><div><span class="core-badge ai">PRICE LAB</span><h3>AI-диапазон сделки и динамическая цена</h3><p>Продавец может работать внутри диапазона. Ниже минимальной цены — только через согласование.</p></div></div><div class="price-list">${data.parts.map(p=>`<div class="price-row"><div><div class="row-title">${esc(p.name)}</div><div class="row-meta">${p.id} · спрос ${p.demand}/100 · ${p.age} дней</div><div class="price-track"><i style="width:${Math.max(8,p.demand)}%"></i></div></div><div><div class="row-title">${money(p.minPrice)}</div><div class="row-meta">минимум</div></div><div><div class="row-title">${money(p.price)}</div><div class="row-meta">текущая</div></div><div><div class="row-title">${money(p.optimalPrice)}</div><div class="row-meta">оптимум</div></div><button class="core-btn ai" data-action="apply-price" data-id="${p.id}">Применить AI</button></div>`).join('')}</div></div></section>`}
 
-function money(value) {
-  return `${new Intl.NumberFormat('ru-RU').format(Math.round(value || 0))} ₽`;
-}
+function warehouseView(){const zones=['A','B','C'];return `<section class="view"><div class="core-topline"><div><span class="core-badge ai">WAREHOUSE AI</span><h3>Зона → стеллаж → полка → ячейка</h3><p>AI может предложить перестановку по оборачиваемости и вести сотрудника пошагово.</p></div><button class="core-btn ai" data-action="optimize-warehouse">Разобрать склад</button></div><div class="warehouse-tree">${zones.map(z=>{const ps=data.parts.filter(p=>p.status!=='sold'&&p.location?.zone===z);return `<article class="zone-card"><div class="core-topline"><div><div class="eyebrow">ЗОНА ${z}</div><h3>${z==='A'?'Двигатели / трансмиссия':z==='B'?'Кузов / оптика':'Крупногабарит'}</h3></div><span class="core-badge">${ps.length} товаров</span></div><div class="rack-grid">${ps.map(p=>`<div class="rack-cell"><strong>${z}-${p.location.rack}-${p.location.shelf}-${p.location.cell||'A'}</strong><span>${esc(p.name)}</span><span>${p.age} дней · спрос ${p.demand}</span></div>`).join('')||'<div class="rack-cell"><span>Свободно</span></div>'}</div></article>`}).join('')}</div></section>`}
 
-function vehicleName(vehicleId) {
-  const vehicle = data.vehicles.find((item) => item.id === vehicleId);
-  return vehicle ? `${vehicle.make} ${vehicle.model}` : 'Без автомобиля';
-}
+function partsView(){return `<section class="view"><article class="core-card"><div class="core-topline"><div><h3>Товары</h3><p>Карточка товара — источник публикаций, цены, склада и Market.</p></div><button class="core-btn primary" data-action="new-part">${icon('plus')} Товар</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Товар</th><th>Категория</th><th>Место</th><th>Цена</th><th>Статус</th><th>Market</th></tr></thead><tbody>${data.parts.map(p=>`<tr><td><div class="part-name"><span class="part-thumb">${icon('package')}</span><span><strong>${esc(p.name)}</strong><span>${p.id}</span></span></div></td><td>${esc(p.category)}</td><td><span class="location-code">${p.location.zone}-${p.location.rack}-${p.location.shelf}-${p.location.cell||'A'}</span></td><td><span class="money">${money(p.price)}</span></td><td><select class="status-select" data-action="part-status" data-id="${p.id}"><option value="removed" ${p.status==='removed'?'selected':''}>Снята</option><option value="ready" ${p.status==='ready'?'selected':''}>Готова</option><option value="listed" ${p.status==='listed'?'selected':''}>Опубликована</option><option value="reserved" ${p.status==='reserved'?'selected':''}>Бронь</option><option value="sold" ${p.status==='sold'?'selected':''}>Продана</option></select></td><td><span class="core-badge ${p.status==='listed'?'good':'warn'}">${p.status==='listed'?'доступен':'не опубликован'}</span></td></tr>`).join('')}</tbody></table></div></article></section>`}
 
-function locationCode(location) {
-  if (!location) return 'Не размещена';
-  return `${location.zone}-${location.rack}-${location.shelf}`;
-}
+function analyticsView(){const avgResp=(data.leads.reduce((s,l)=>s+l.firstResponse,0)/data.leads.length).toFixed(1);const stock=data.parts.reduce((s,p)=>s+p.price,0);return `<section class="view"><div class="core-card director"><div><span class="core-badge ai">AI DIRECTOR</span><h2>Сильная сторона — скорость решений. Узкое место — дисциплина follow-up.</h2><p>Рекомендация: не увеличивать скидки; сначала закрыть просроченные повторные касания и ускорить публикацию готовых товаров.</p></div><div class="autonomy-ring" style="--p:${data.meta.autonomy}%"><div><strong>${data.meta.autonomy}%</strong><span>автономность</span></div></div></div><div class="core-grid cols-4" style="margin-top:14px"><article class="core-card"><div class="eyebrow">Средний ответ</div><div class="core-kpi">${avgResp} мин</div></article><article class="core-card"><div class="eyebrow">Стоимость остатков</div><div class="core-kpi">${money(stock)}</div></article><article class="core-card"><div class="eyebrow">Товар > 90 дней</div><div class="core-kpi">${data.parts.filter(p=>p.age>90).length}</div></article><article class="core-card"><div class="eyebrow">AI действия</div><div class="core-kpi">${data.aiEvents.length}</div></article></div><article class="core-card" style="margin-top:14px"><div class="eyebrow">ВНЕШНИЕ СИГНАЛЫ / ПРОГНОЗ 30 ДНЕЙ</div><h3>Спрос устойчивый, но ликвидность склада важнее наращивания ассортимента.</h3><p>Приоритет: оборачиваемость → цена → публикации → закупка. Внешние сигналы подключаются как контекст, но не принимают решения вместо владельца при низкой уверенности.</p></article></section>`}
 
-let data = loadData();
-let ui = {
-  activeView: 'dashboard',
-  partFilter: 'all',
-  query: '',
-  modalOpen: false,
-};
+function financeView(){const f=data.finance,profit=f.income-f.expenses-f.mandatory-f.optional;return `<section class="view"><div class="core-grid cols-4"><article class="core-card"><div class="eyebrow">Доход</div><div class="core-kpi">${money(f.income)}</div></article><article class="core-card"><div class="eyebrow">Расходы</div><div class="core-kpi">${money(f.expenses)}</div></article><article class="core-card"><div class="eyebrow">Обязательные</div><div class="core-kpi">${money(f.mandatory)}</div></article><article class="core-card"><div class="eyebrow">Результат</div><div class="core-kpi">${money(profit)}</div></article></div><div class="core-grid cols-2" style="margin-top:14px"><article class="core-card"><div class="eyebrow">ДЕНЕЖНЫЙ ПОТОК</div><h3>${money(f.cashflow)}</h3><p>Быстрое добавление доходов и расходов возвращается отдельным действием на следующем проходе.</p></article><article class="core-card"><div class="eyebrow">ПРИНЦИП МОНЕТИЗАЦИИ</div><h3>0% комиссия за продажу</h3><p>Доход EINEIRO — прозрачные платные сервисы, подписка, продвижение и логистика. Внешние обязательные расходы показываются постатейно.</p></article></div></section>`}
 
-const app = document.querySelector('#app');
+function integrationsView(){return `<section class="view"><article class="core-card"><div class="core-topline"><div><h3>Центр подключений</h3><p>Каналы появляются в публикации, аналитике и едином входящем контуре.</p></div></div>${data.integrations.map((x,i)=>`<div class="integration-row"><div><div class="row-title">${esc(x.name)}</div><div class="row-meta">${esc(x.mode)}</div></div><span class="core-badge ${x.enabled?'good':'warn'}">${esc(x.status)}</span><button class="switch ${x.enabled?'on':''}" data-action="toggle-integration" data-i="${i}" aria-label="${x.name}"></button></div>`).join('')}</article></section>`}
 
-function navMarkup(mobile = false) {
-  return navigation.map((item) => `
-    <button class="nav-button ${ui.activeView === item.id ? 'active' : ''}" data-action="navigate" data-view="${item.id}" aria-label="${item.label}">
-      ${icon(item.icon)}
-      <span>${mobile ? item.short : item.label}</span>
-    </button>
-  `).join('');
-}
+function renderModal(){if(ui.modal==='task')return `<div class="modal-backdrop"><section class="modal"><div class="modal-header"><h2>Новая задача</h2><button class="icon-button" data-action="close">${icon('close')}</button></div><form id="task-form"><div class="form-grid"><div class="form-field full"><label>Задача</label><input name="title" required placeholder="Что нужно сделать"></div><div class="form-field"><label>Исполнитель</label><select name="owner"><option>Склад</option><option>Продажи</option><option>Владелец</option></select></div><div class="form-field"><label>Приоритет</label><select name="priority"><option value="normal">Обычный</option><option value="high">Срочный</option></select></div></div><div class="modal-footer"><button class="button button-secondary" type="button" data-action="close">Отмена</button><button class="button button-primary">Сохранить</button></div></form></section></div>`;if(ui.modal==='part')return `<div class="modal-backdrop"><section class="modal"><div class="modal-header"><h2>Новый товар</h2><button class="icon-button" data-action="close">${icon('close')}</button></div><form id="part-form"><div class="form-grid"><div class="form-field full"><label>Название</label><input name="name" required></div><div class="form-field"><label>Категория</label><input name="category" required></div><div class="form-field"><label>Цена</label><input name="price" type="number" required></div><div class="form-field full"><label>Место хранения</label><div class="location-fields"><select name="zone"><option>A</option><option>B</option><option>C</option></select><input name="rack" value="01"><input name="shelf" value="1"><input name="cell" value="A"></div></div></div><div class="modal-footer"><button class="button button-secondary" type="button" data-action="close">Отмена</button><button class="button button-primary">Сохранить</button></div></form></section></div>`;return''}
+function toast(msg){document.querySelector('.toast')?.remove();const t=document.createElement('div');t.className='toast';t.innerHTML=`${icon('check')}<span>${esc(msg)}</span>`;document.body.append(t);setTimeout(()=>t.remove(),2400)}
 
-function renderApp() {
-  const [title, subtitle] = pageCopy[ui.activeView];
-  app.innerHTML = `
-    <div class="shell">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark">EP</div>
-          <div class="brand-copy"><strong>EP Base</strong><span>Easy Parts</span></div>
-        </div>
-        <div class="sidebar-label">Рабочая зона</div>
-        <nav class="nav" aria-label="Основная навигация">${navMarkup()}</nav>
-        <div class="sidebar-footer">
-          <div class="eyebrow">MVP · 0.1</div>
-          <p>Данные этой версии сохраняются на текущем устройстве.</p>
-        </div>
-      </aside>
-      <main class="content">
-        <header class="topbar">
-          <div class="top-title">
-            <h1>${title}</h1>
-            <p>${subtitle}</p>
-          </div>
-          <div class="top-actions">
-            <label class="search-box" aria-label="Поиск деталей">
-              ${icon('search')}
-              <input id="global-search" type="search" placeholder="Название или EP-код" value="${escapeHtml(ui.query)}" autocomplete="off" />
-            </label>
-            <button class="button button-primary" data-action="add-part">${icon('plus')}<span>Добавить деталь</span></button>
-          </div>
-        </header>
-        <div id="view-root">${renderView()}</div>
-      </main>
-    </div>
-    <nav class="mobile-nav" aria-label="Мобильная навигация">${navMarkup(true)}</nav>
-    ${ui.modalOpen ? renderAddPartModal() : ''}
-  `;
-}
-
-function renderView() {
-  const renderers = {
-    dashboard: renderDashboard,
-    donors: renderDonors,
-    parts: renderParts,
-    warehouse: renderWarehouse,
-    finance: renderFinance,
-  };
-  return renderers[ui.activeView]();
-}
-
-function metricCard(label, value, note, iconName, tone = '') {
-  return `
-    <article class="metric-card">
-      <div class="metric-head"><span>${label}</span><span class="metric-icon ${tone}">${icon(iconName)}</span></div>
-      <div class="metric-value">${value}</div>
-      <div class="metric-note">${note}</div>
-    </article>
-  `;
-}
-
-function renderDashboard() {
-  const inStock = data.parts.filter((part) => part.status !== 'sold');
-  const listed = data.parts.filter((part) => part.status === 'listed');
-  const sold = data.parts.filter((part) => part.status === 'sold');
-  const stockValue = inStock.reduce((sum, part) => sum + Number(part.price), 0);
-  const soldValue = sold.reduce((sum, part) => sum + Number(part.price), 0);
-
-  return `
-    <section class="view">
-      <div class="hero">
-        <div>
-          <div class="eyebrow">Сегодня на складе</div>
-          <h2>Каждая деталь<br>на своём месте.</h2>
-          <p>Быстрый учёт от автомобиля-донора до продажи. Без потерянных запчастей и записей в разных блокнотах.</p>
-        </div>
-        <div class="hero-visual">
-          <div class="part-tag">
-            <div class="eyebrow">Маркировка детали</div>
-            <div class="tag-id">EP-000126</div>
-            <div class="tag-line"><span>Solaris · 2017</span><strong>A-01-2</strong></div>
-          </div>
-        </div>
-      </div>
-      <div class="metrics">
-        ${metricCard('Деталей на складе', inStock.length, '<span class="positive">●</span> учёт активен', 'package')}
-        ${metricCard('Опубликовано', listed.length, 'готовы к продаже', 'upload', 'blue')}
-        ${metricCard('Стоимость остатков', money(stockValue), 'по цене продажи', 'finance', 'yellow')}
-        ${metricCard('Продано в базе', money(soldValue), `${sold.length} позиции`, 'receipt', 'green')}
-      </div>
-      <div class="dashboard-grid">
-        <section class="panel">
-          <div class="panel-header">
-            <div class="panel-title"><h3>Последние события</h3><p>Что происходило с деталями</p></div>
-            <button class="link-button" data-action="navigate" data-view="parts">Все детали ${icon('arrow')}</button>
-          </div>
-          <ul class="activity-list">
-            ${data.activities.slice(0, 4).map((activity) => `
-              <li class="activity-item">
-                <span class="activity-icon ${activity.type}">${icon(activity.type === 'sale' ? 'receipt' : activity.type === 'move' ? 'move' : 'package')}</span>
-                <span class="activity-copy"><strong>${escapeHtml(activity.title)}</strong><span>${escapeHtml(activity.subtitle)}</span></span>
-                <span class="activity-time">${escapeHtml(activity.time)}</span>
-              </li>
-            `).join('')}
-          </ul>
-        </section>
-        <section class="panel">
-          <div class="panel-header">
-            <div class="panel-title"><h3>Требует внимания</h3><p>Очередь работы</p></div>
-          </div>
-          <ul class="task-list">
-            <li class="task-item"><span class="task-dot"></span><span class="task-copy"><strong>Подготовить к продаже</strong><span>Мойка, проверка, фото</span></span><span class="task-count">${data.parts.filter((p) => p.status === 'removed').length}</span></li>
-            <li class="task-item"><span class="task-dot"></span><span class="task-copy"><strong>Забронировано</strong><span>Проверить срок брони</span></span><span class="task-count">${data.parts.filter((p) => p.status === 'reserved').length}</span></li>
-            <li class="task-item"><span class="task-dot"></span><span class="task-copy"><strong>Не опубликовано</strong><span>Готово, но нет объявления</span></span><span class="task-count">${data.parts.filter((p) => p.status === 'ready').length}</span></li>
-          </ul>
-        </section>
-      </div>
-    </section>
-  `;
-}
-
-function filteredParts() {
-  const query = ui.query.trim().toLocaleLowerCase('ru');
-  return data.parts.filter((part) => {
-    const matchesStatus = ui.partFilter === 'all' || part.status === ui.partFilter;
-    const haystack = `${part.id} ${part.name} ${part.category} ${vehicleName(part.vehicleId)} ${locationCode(part.location)}`.toLocaleLowerCase('ru');
-    return matchesStatus && (!query || haystack.includes(query));
-  });
-}
-
-function statusOptions(current) {
-  return Object.entries(statusLabels).map(([value, label]) => `<option value="${value}" ${current === value ? 'selected' : ''}>${label}</option>`).join('');
-}
-
-function renderParts() {
-  const parts = filteredParts();
-  const filters = [['all', 'Все'], ...Object.entries(statusLabels)];
-  return `
-    <section class="view">
-      <div class="page-tools">
-        <div class="filters" aria-label="Фильтр по статусу">
-          ${filters.map(([value, label]) => `<button class="filter-button ${ui.partFilter === value ? 'active' : ''}" data-action="filter-parts" data-filter="${value}">${label}</button>`).join('')}
-        </div>
-        <span class="eyebrow">Найдено: ${parts.length}</span>
-      </div>
-      <section class="panel">
-        ${parts.length ? `
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead><tr><th>Деталь</th><th>Автомобиль</th><th>Категория</th><th>Место</th><th>Цена</th><th>Статус</th></tr></thead>
-              <tbody>
-                ${parts.map((part) => `
-                  <tr>
-                    <td><div class="part-name"><span class="part-thumb">${icon('wrench')}</span><span><strong>${escapeHtml(part.name)}</strong><span>${escapeHtml(part.id)}</span></span></div></td>
-                    <td>${escapeHtml(vehicleName(part.vehicleId))}</td>
-                    <td>${escapeHtml(part.category)}</td>
-                    <td><span class="location-code">${escapeHtml(locationCode(part.location))}</span></td>
-                    <td><span class="money">${money(part.price)}</span></td>
-                    <td><select class="status-select" data-action="change-status" data-part-id="${escapeHtml(part.id)}" data-status="${part.status}" aria-label="Статус ${escapeHtml(part.name)}">${statusOptions(part.status)}</select></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        ` : `<div class="empty-state"><div>${icon('search')}<strong>Ничего не найдено</strong><p>Измени фильтр или поисковый запрос.</p></div></div>`}
-      </section>
-    </section>
-  `;
-}
-
-function renderDonors() {
-  return `
-    <section class="view">
-      <div class="page-tools">
-        <div class="filters"><button class="filter-button active">Активные · ${data.vehicles.length}</button><button class="filter-button">Архив</button></div>
-        <button class="button button-secondary" data-action="toast" data-message="Добавление автомобиля — следующий этап">${icon('plus')} Автомобиль</button>
-      </div>
-      <div class="donor-grid">
-        ${data.vehicles.map((vehicle) => {
-          const result = vehicle.revenue - vehicle.cost;
-          return `
-            <article class="donor-card">
-              <div class="donor-cover">${icon('car')}<span class="donor-code">${vehicle.id}</span></div>
-              <div class="donor-body">
-                <h3>${escapeHtml(vehicle.make)} ${escapeHtml(vehicle.model)} · ${vehicle.year}</h3>
-                <div class="donor-meta"><span>${escapeHtml(vehicle.color)}</span><span>${escapeHtml(vehicle.vin)}</span></div>
-                <div class="progress-row"><span>Разобрано</span><strong>${vehicle.stage}%</strong></div>
-                <div class="progress"><span style="width:${vehicle.stage}%"></span></div>
-                <div class="donor-footer"><span>Деталей: <b>${vehicle.parts}</b></span><span>Результат: <strong>${result >= 0 ? '+' : ''}${money(result)}</strong></span></div>
-              </div>
-            </article>
-          `;
-        }).join('')}
-      </div>
-    </section>
-  `;
-}
-
-function getWarehouseData() {
-  const definitions = {
-    A: { title: 'Зона A', subtitle: 'Мелкие детали и навесное', racks: 5 },
-    B: { title: 'Зона B', subtitle: 'Кузовные детали и оптика', racks: 3 },
-    C: { title: 'Зона C', subtitle: 'Крупногабаритные детали', racks: 2 },
-  };
-  return Object.entries(definitions).map(([code, zone]) => {
-    const parts = data.parts.filter((part) => part.status !== 'sold' && part.location?.zone === code);
-    const rackData = Array.from({ length: zone.racks }, (_, index) => {
-      const rack = String(index + 1).padStart(2, '0');
-      const count = parts.filter((part) => part.location.rack === rack).length;
-      return { rack, count, fill: Math.min(100, 12 + count * 21) };
-    });
-    return { code, ...zone, parts, rackData };
-  });
-}
-
-function renderWarehouse() {
-  return `
-    <section class="view">
-      <div class="page-tools">
-        <div class="filters"><button class="filter-button active">Все зоны</button><button class="filter-button">Свободные места</button></div>
-        <span class="eyebrow">Схема: зона → стеллаж → полка</span>
-      </div>
-      <div class="warehouse-grid">
-        ${getWarehouseData().map((zone) => `
-          <article class="warehouse-card">
-            <div class="warehouse-head">
-              <div class="warehouse-title"><span class="warehouse-icon">${icon('warehouse')}</span><span><h3>${zone.title}</h3><span>${zone.subtitle}</span></span></div>
-              <span class="occupancy"><strong>${zone.parts.length}</strong> деталей</span>
-            </div>
-            <div class="rack-list">
-              ${zone.rackData.map((rack) => `<div class="rack-row"><strong>${zone.code}-${rack.rack}</strong><span class="mini-progress"><span style="width:${rack.fill}%"></span></span><span>${rack.count}</span></div>`).join('')}
-            </div>
-          </article>
-        `).join('')}
-      </div>
-    </section>
-  `;
-}
-
-function renderFinance() {
-  const invested = data.vehicles.reduce((sum, vehicle) => sum + vehicle.cost, 0);
-  const revenue = data.vehicles.reduce((sum, vehicle) => sum + vehicle.revenue, 0);
-  const profit = revenue - invested;
-  const maxRevenue = Math.max(...data.vehicles.map((vehicle) => vehicle.revenue), 1);
-  return `
-    <section class="view">
-      <div class="finance-grid">
-        <article class="metric-card finance-card"><div class="eyebrow">Вложено в автомобили</div><div class="metric-value">${money(invested)}</div><div class="metric-note">Закупочная стоимость доноров</div></article>
-        <article class="metric-card finance-card"><div class="eyebrow">Выручка по базе</div><div class="metric-value">${money(revenue)}</div><div class="metric-note">Сумма учтённых продаж</div></article>
-        <article class="metric-card finance-card"><div class="eyebrow">Текущий результат</div><div class="metric-value" style="color:${profit >= 0 ? 'var(--green)' : 'var(--red)'}">${profit >= 0 ? '+' : ''}${money(profit)}</div><div class="metric-note">Без учёта операционных расходов</div></article>
-      </div>
-      <div class="finance-layout">
-        <section class="panel">
-          <div class="panel-header"><div class="panel-title"><h3>Окупаемость автомобилей</h3><p>Выручка относительно закупки</p></div></div>
-          <div class="bar-chart">
-            ${data.vehicles.map((vehicle) => `
-              <div class="bar-group">
-                <div class="bar" style="height:${Math.max(8, vehicle.revenue / maxRevenue * 100)}%" title="Выручка ${money(vehicle.revenue)}"></div>
-                <div class="bar bar-cost" style="height:${Math.max(8, vehicle.cost / maxRevenue * 100)}%" title="Закупка ${money(vehicle.cost)}"></div>
-                <span>${escapeHtml(vehicle.model)}</span>
-              </div>
-            `).join('')}
-          </div>
-        </section>
-        <section class="panel">
-          <div class="panel-header"><div class="panel-title"><h3>По автомобилям</h3><p>Финансовый результат</p></div></div>
-          <div class="finance-list">
-            ${data.vehicles.map((vehicle) => {
-              const result = vehicle.revenue - vehicle.cost;
-              return `<div class="finance-row"><span><strong>${escapeHtml(vehicle.make)} ${escapeHtml(vehicle.model)}</strong><span>${money(vehicle.revenue)} выручки</span></span><span class="money" style="color:${result >= 0 ? 'var(--green)' : 'var(--red)'}">${result >= 0 ? '+' : ''}${money(result)}</span></div>`;
-            }).join('')}
-          </div>
-        </section>
-      </div>
-    </section>
-  `;
-}
-
-function renderAddPartModal() {
-  return `
-    <div class="modal-backdrop" data-action="close-modal">
-      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="add-part-title">
-        <div class="modal-header"><h2 id="add-part-title">Новая деталь</h2><button class="icon-button" type="button" data-action="close-modal" aria-label="Закрыть">${icon('close')}</button></div>
-        <form id="add-part-form">
-          <div class="form-grid">
-            <div class="form-field full"><label for="part-name">Название детали</label><input id="part-name" name="name" required placeholder="Например: генератор" autofocus /></div>
-            <div class="form-field"><label for="part-vehicle">Автомобиль-донор</label><select id="part-vehicle" name="vehicleId" required>${data.vehicles.map((vehicle) => `<option value="${vehicle.id}">${escapeHtml(vehicle.make)} ${escapeHtml(vehicle.model)} · ${vehicle.year}</option>`).join('')}</select></div>
-            <div class="form-field"><label for="part-category">Категория</label><select id="part-category" name="category"><option>Двигатель</option><option>Трансмиссия</option><option>Навесное</option><option>Кузов</option><option>Оптика</option><option>Электрика</option><option>Салон</option><option>Ходовая</option><option>Прочее</option></select></div>
-            <div class="form-field full"><label for="part-price">Цена продажи, ₽</label><input id="part-price" name="price" required min="0" step="100" type="number" inputmode="numeric" placeholder="15000" /></div>
-            <div class="form-field full">
-              <label>Место хранения</label>
-              <div class="location-fields">
-                <select name="zone" aria-label="Зона"><option value="A">Зона A</option><option value="B">Зона B</option><option value="C">Зона C</option></select>
-                <input name="rack" required maxlength="2" placeholder="Стеллаж" value="01" aria-label="Стеллаж" />
-                <input name="shelf" required maxlength="2" placeholder="Полка" value="1" aria-label="Полка" />
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer"><button class="button button-secondary" type="button" data-action="close-modal">Отмена</button><button class="button button-primary" type="submit">${icon('check')} Сохранить</button></div>
-        </form>
-      </section>
-    </div>
-  `;
-}
-
-function navigate(view) {
-  if (!pageCopy[view]) return;
-  ui.activeView = view;
-  if (view !== 'parts') ui.query = '';
-  renderApp();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function showToast(message) {
-  document.querySelector('.toast')?.remove();
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.innerHTML = `${icon('check')}<span>${escapeHtml(message)}</span>`;
-  document.body.append(toast);
-  window.setTimeout(() => toast.remove(), 2600);
-}
-
-app.addEventListener('click', (event) => {
-  const target = event.target.closest('[data-action]');
-  if (!target) return;
-  const action = target.dataset.action;
-
-  if (action === 'navigate') navigate(target.dataset.view);
-  if (action === 'add-part') {
-    ui.modalOpen = true;
-    renderApp();
-    window.setTimeout(() => document.querySelector('#part-name')?.focus(), 0);
-  }
-  if (action === 'close-modal' && (target === event.target || target.closest('button'))) {
-    ui.modalOpen = false;
-    renderApp();
-  }
-  if (action === 'filter-parts') {
-    ui.partFilter = target.dataset.filter;
-    document.querySelector('#view-root').innerHTML = renderParts();
-  }
-  if (action === 'toast') showToast(target.dataset.message);
-});
-
-app.addEventListener('input', (event) => {
-  if (event.target.id !== 'global-search') return;
-  ui.query = event.target.value;
-  if (ui.activeView !== 'parts') {
-    ui.activeView = 'parts';
-    renderApp();
-    const search = document.querySelector('#global-search');
-    search?.focus();
-    search?.setSelectionRange(ui.query.length, ui.query.length);
-    return;
-  }
-  document.querySelector('#view-root').innerHTML = renderParts();
-});
-
-app.addEventListener('change', (event) => {
-  if (event.target.dataset.action !== 'change-status') return;
-  const part = data.parts.find((item) => item.id === event.target.dataset.partId);
-  if (!part) return;
-  part.status = event.target.value;
-  data.activities.unshift({
-    type: event.target.value === 'sold' ? 'sale' : 'move',
-    title: `${event.target.value === 'sold' ? 'Продана' : 'Обновлена'}: ${part.name}`,
-    subtitle: `${part.id} · ${statusLabels[part.status]}`,
-    time: 'сейчас',
-  });
-  saveData();
-  document.querySelector('#view-root').innerHTML = renderParts();
-  showToast(`Статус: ${statusLabels[part.status]}`);
-});
-
-app.addEventListener('submit', (event) => {
-  if (event.target.id !== 'add-part-form') return;
-  event.preventDefault();
-  const values = Object.fromEntries(new FormData(event.target));
-  const maxId = data.parts.reduce((max, part) => Math.max(max, Number(part.id.replace(/\D/g, '')) || 0), 0);
-  const newPart = {
-    id: `EP-${String(maxId + 1).padStart(6, '0')}`,
-    name: values.name.trim(),
-    vehicleId: values.vehicleId,
-    category: values.category,
-    price: Number(values.price),
-    status: 'removed',
-    location: {
-      zone: values.zone.toUpperCase(),
-      rack: values.rack.trim().padStart(2, '0'),
-      shelf: values.shelf.trim(),
-    },
-    addedAt: new Date().toISOString(),
-  };
-  data.parts.unshift(newPart);
-  data.activities.unshift({ type: 'part', title: `Добавлена: ${newPart.name}`, subtitle: `${vehicleName(newPart.vehicleId)} · ${newPart.id}`, time: 'сейчас' });
-  saveData();
-  ui.modalOpen = false;
-  ui.activeView = 'parts';
-  ui.partFilter = 'all';
-  renderApp();
-  showToast(`${newPart.id} сохранена`);
-});
-
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && ui.modalOpen) {
-    ui.modalOpen = false;
-    renderApp();
-  }
-});
-
-renderApp();
+const app=document.querySelector('#app');
+app.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;const a=b.dataset.action;if(a==='nav'){ui.view=b.dataset.view;render();scrollTo({top:0,behavior:'smooth'})}if(a==='toggle-ai'){data.meta.ai=!data.meta.ai;save();render();toast(data.meta.ai?'ИИ-контур включён':'ИИ-контур выключен')}if(a==='resolve-exception'){data.exceptions=data.exceptions.filter(x=>x.id!==b.dataset.id);data.meta.autonomy=Math.min(99,data.meta.autonomy+1);save();render();toast('Исключение закрыто')}if(a==='followup'){const l=data.leads.find(x=>x.id===b.dataset.id);if(l){l.followup=true;data.aiEvents.unshift({time:new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}),text:`Follow-up отправлен: ${l.customer}`,impact:'возврат клиента'});save();render();toast('Follow-up отправлен')}}if(a==='cycle-task'){const t=data.tasks.find(x=>x.id===b.dataset.id);if(t){t.status=t.status==='todo'?'progress':t.status==='progress'?'done':'todo';save();render();toast('Статус задачи обновлён')}}if(a==='apply-price'){const p=data.parts.find(x=>x.id===b.dataset.id);if(p){p.price=p.optimalPrice;save();render();toast(`Цена ${p.id}: ${money(p.price)}`)}}if(a==='optimize-warehouse'){const aged=data.parts.filter(p=>p.age>60);aged.forEach((p,i)=>p.location={zone:p.category==='Кузов'||p.category==='Оптика'?'B':'A',rack:String((i%3)+1).padStart(2,'0'),shelf:String((i%3)+1),cell:String.fromCharCode(65+i%3)});data.aiEvents.unshift({time:new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}),text:`Склад оптимизирован: ${aged.length} рекомендаций применено`,impact:'оборачиваемость'});save();render();toast('AI применил схему размещения')}if(a==='toggle-integration'){const x=data.integrations[Number(b.dataset.i)];if(x){x.enabled=!x.enabled;x.status=x.enabled?'online':'not configured';save();render()}}if(a==='new-task'){ui.modal='task';render()}if(a==='new-part'){ui.modal='part';render()}if(a==='close'){ui.modal=null;render()}});
+app.addEventListener('change',e=>{if(e.target.dataset.action==='part-status'){const p=data.parts.find(x=>x.id===e.target.dataset.id);if(p){p.status=e.target.value;save();toast('Статус товара обновлён')}}});
+app.addEventListener('submit',e=>{e.preventDefault();if(e.target.id==='task-form'){const v=Object.fromEntries(new FormData(e.target));data.tasks.unshift({id:`T-${Date.now().toString().slice(-4)}`,title:v.title,owner:v.owner,priority:v.priority,status:'todo',source:'Manual'});ui.modal=null;save();render();toast('Задача создана')}if(e.target.id==='part-form'){const v=Object.fromEntries(new FormData(e.target));const price=Number(v.price);data.parts.unshift({id:`EP-${String(Date.now()).slice(-6)}`,name:v.name,category:v.category,price,minPrice:Math.round(price*.9),optimalPrice:Math.round(price*1.04),status:'removed',location:{zone:v.zone,rack:v.rack||'01',shelf:v.shelf||'1',cell:v.cell||'A'},age:0,demand:50});ui.modal=null;save();render();toast('Товар добавлен')}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ui.modal){ui.modal=null;render()}});
+render();
