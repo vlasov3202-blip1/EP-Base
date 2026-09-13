@@ -1,3 +1,6 @@
 dist/
 .DS_Store
 node_modules/
+data/
+*.db.json
+*.db.json.tmp
