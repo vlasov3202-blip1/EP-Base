@@ -29,6 +29,7 @@ jobs:
           node server/control-plane-health.test.mjs
           node server/search.test.mjs
           node server/product-graph.test.mjs
+          node server/recovery-security.test.mjs
           node spatial-capabilities.test.mjs
 
       - name: Build complete recovery runtime
@@ -69,6 +70,26 @@ jobs:
           curl -fsS http://127.0.0.1:4183/admin.js >/dev/null
           code=$(curl -sS -o /tmp/control-plane.json -w '%{http_code}' http://127.0.0.1:4183/api/v1/control-plane)
           test "$code" = "401"
+
+          for private_path in package.json server/auth.mjs scripts/serve.mjs; do
+            code=$(curl --path-as-is -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:4183/$private_path")
+            test "$code" = "404"
+          done
+          code=$(curl --path-as-is -sS -o /dev/null -w '%{http_code}' 'http://127.0.0.1:4183/%2e%2e/server/auth.mjs')
+          test "$code" = "404"
+
+          curl -fsS -X POST http://127.0.0.1:4183/api/auth/register \
+            -H 'Content-Type: application/json' \
+            --data '{"companyId":"victim","userId":"root","identityId":"root","role":"admin","email":"ci-owner@example.com","password":"ci-owner-secret"}' >/tmp/signup.json
+          COMPANY_ID=$(node -e "const x=require('/tmp/signup.json').user;if(x.companyId==='victim'||x.id==='root'||x.identityId==='root'||x.role!=='owner'||x.passwordHash)process.exit(1);process.stdout.write(x.companyId)")
+          curl -fsS -X POST http://127.0.0.1:4183/api/auth/login \
+            -H 'Content-Type: application/json' \
+            --data "{\"companyId\":\"$COMPANY_ID\",\"email\":\"ci-owner@example.com\",\"password\":\"ci-owner-secret\"}" >/tmp/login.json
+          TOKEN=$(node -e "process.stdout.write(require('/tmp/login.json').token)")
+          code=$(curl -sS -o /tmp/platform-owner.json -w '%{http_code}' http://127.0.0.1:4183/api/v1/platform/queue -H "Authorization: Bearer $TOKEN")
+          test "$code" = "403"
+          code=$(curl -sS -o /tmp/company-backup.json -w '%{http_code}' -X POST http://127.0.0.1:4183/api/v1/company/backups -H "Authorization: Bearer $TOKEN")
+          test "$code" = "201"
           cat /tmp/eineiro-183.log
 
       - name: Package recovery candidate
