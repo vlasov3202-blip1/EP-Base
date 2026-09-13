@@ -81,6 +81,7 @@ export class PostgresStore{
   async appendEvent(event){await this.pool.query('INSERT INTO eineiro_events(company_id,data) VALUES($1,$2::jsonb)',[event.companyId,JSON.stringify(event)]);}
   async listEvents(companyId){return (await this.pool.query('SELECT data FROM eineiro_events WHERE company_id=$1 ORDER BY id',[companyId])).rows.map(r=>r.data);}
   async listAllApiKeys(){return (await this.pool.query("SELECT data FROM eineiro_records WHERE entity='ApiKey'")).rows.map(r=>r.data);}
+  async listCompanyIds(){const r=await this.pool.query("SELECT company_id FROM eineiro_users UNION SELECT company_id FROM eineiro_records ORDER BY company_id");return r.rows.map(x=>x.company_id);}
 }
 
 export class PostgresTenantRepository{
