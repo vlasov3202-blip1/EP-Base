@@ -23,7 +23,7 @@ const provider={async understand(){return {
     {slotId:'vase',label:'Ваза',category:'home.decor',searchQuery:'ваза для полки',attributes:{},confidence:.95,anchorHint:'on:shelf'},
     {slotId:'book',label:'Книга',category:'books',searchQuery:'книга для композиции',attributes:{},confidence:.93,anchorHint:'on:shelf'}
   ]
-}};
+}}};
 const variants={
   shelf:Array.from({length:18},(_,i)=>({id:`s${i+1}`,name:`Полка ${i+1}`,relevance:.99-i*.01})),
   vase:Array.from({length:43},(_,i)=>({id:`v${i+1}`,name:`Ваза ${i+1}`,relevance:.99-i*.005})),

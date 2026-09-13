@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import {AuthService} from './auth.mjs';
 import {assertCan} from './core.mjs';
 import {ApiKeyService} from './api-keys.mjs';
@@ -50,7 +51,7 @@ export async function handlePlatformApi(req,res){
     try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:read'});adminOnly(ctx);return finish(200,{metrics:rt.infra.metrics.snapshot(),queue:rt.infra.queue.stats()});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'METRICS_FORBIDDEN'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/auth/register'){
-    try{const p=await body(req);const user=await rt.auth.register(p);return finish(201,{user});}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'REGISTER_ERROR'})}
+    try{const p=await body(req);if(!p.email||!p.password)throw Object.assign(new Error('email/password required'),{status:400,code:'REGISTER_FIELDS_REQUIRED'});const companyId=`company_${crypto.randomUUID()}`,userId=`user_${crypto.randomUUID()}`;const user=await rt.auth.register({companyId,userId,email:p.email,password:p.password,name:p.name||'',role:'owner'});return finish(201,{user,companyId,role:'owner'});}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'REGISTER_ERROR'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/auth/login'){
     try{const p=await body(req);const out=await rt.auth.login(p);return finish(200,out);}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'LOGIN_ERROR'})}
@@ -91,17 +92,14 @@ export async function handlePlatformApi(req,res){
   }
   const m=url.pathname.match(/^\/api\/v1\/(products|orders|tasks|messages|events|audit)$/);
   if(m){
+    if(req.method!=='GET')return finish(405,{error:'generic entity writes are disabled; use the domain command API',code:'DOMAIN_COMMAND_REQUIRED'});
     const entityMap={products:'Product',orders:'Order',tasks:'Task',messages:'Message',events:'Event',audit:'AuditEntry'};
     const permissionMap={products:'inventory.read',orders:'orders.read',tasks:'tasks.read',messages:'inbox.read',events:'analytics.read',audit:'analytics.read'};
     try{
-      const writePerm={products:'inventory.write',orders:'orders.pack',tasks:'tasks.write',messages:'inbox.write'}[m[1]];
-      const ctx=await authorize(req,{permission:req.method==='GET'?permissionMap[m[1]]:writePerm,scope:scopeFor(m[1],req.method)});
-      if(m[1]==='events')return finish(200,{items:await rt.store.listEvents(ctx.companyId)});
-      if(m[1]==='audit')return finish(200,{items:await rt.store.listAudit(ctx.companyId)});
-      const repo=rt.store.tenant(ctx);if(req.method==='GET')return finish(200,{items:await repo.list(entityMap[m[1]])});
-      if(req.method==='POST'){
-        if(!writePerm)return finish(405,{error:'method not allowed'});const p=await body(req);if(!p.id)throw Object.assign(new Error('id required'),{status:400});const item=await repo.put(entityMap[m[1]],p);return finish(201,{item});
-      }
+      const ctx=await authorize(req,{permission:permissionMap[m[1]],scope:scopeFor(m[1],req.method)});
+      if(m[1]==='events'){const dump=await rt.store.exportCompany(ctx.companyId);return finish(200,{items:dump.events||[]});}
+      if(m[1]==='audit'){const dump=await rt.store.exportCompany(ctx.companyId);return finish(200,{items:dump.audit||[]});}
+      const repo=rt.store.tenant(ctx);return finish(200,{items:await repo.list(entityMap[m[1]])});
     }catch(e){const status=e.code==='FORBIDDEN'||e.code==='SCOPE_FORBIDDEN'?403:e.status||401;return finish(status,{error:e.message,code:e.code||'API_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
   }
   return false;

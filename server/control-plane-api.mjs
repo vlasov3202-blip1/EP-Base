@@ -37,7 +37,7 @@ export async function handleControlPlaneApi(req,res){
     if(req.method==='POST'&&url.pathname==='/api/v1/control-plane/feature-flags'){await access.require(ctx,'platform.flags.write');const p=await body(req);if(!p.id)throw new Error('id required');const rec={...p,id:String(p.id),enabled:Boolean(p.enabled),updatedAt:new Date().toISOString()};await repo.put('FeatureFlag',rec);return json(res,200,{item:rec});}
     if(req.method==='GET'&&url.pathname==='/api/v1/control-plane/moderation'){await access.require(ctx,'platform.moderation.read');return json(res,200,{items:await repo.list('ModerationCase')});}
     if(req.method==='GET'&&url.pathname==='/api/v1/control-plane/experiments'){await access.require(ctx,'platform.experiments.read');return json(res,200,{tests:await repo.list('MarketingTest'),memory:await repo.list('MarketingMemory')});}
-    if(req.method==='GET'&&url.pathname==='/api/v1/control-plane/audit'){await access.require(ctx,'platform.audit.read');return json(res,200,{items:(await store.exportCompany(company)).audit||[]});
+    if(req.method==='GET'&&url.pathname==='/api/v1/control-plane/audit'){await access.require(ctx,'platform.audit.read');return json(res,200,{items:(await store.exportCompany(company)).audit||[]});}
     return json(res,404,{error:'not found'});
   }catch(e){const status=e.code==='FORBIDDEN_CAPABILITY'?403:e.status||500;return json(res,status,{error:e.message,code:e.code||'CONTROL_PLANE_ERROR'});}
 }

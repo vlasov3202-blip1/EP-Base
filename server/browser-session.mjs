@@ -18,6 +18,15 @@ function csrfOk(req,cookies){const sent=String(req.headers['x-csrf-token']||'');
 export async function handleBrowserSession(req,res){
   const url=new URL(req.url,'http://local');
   const cookies=parseCookies(req.headers.cookie||'');
+  if(req.method==='POST'&&url.pathname==='/api/auth/register'){
+    try{
+      const {auth}=await getPlatformRuntimeForTests();const p=await body(req);
+      if(!p.email||!p.password)throw Object.assign(new Error('email/password required'),{status:400,code:'REGISTER_FIELDS_REQUIRED'});
+      const companyId=`company_${crypto.randomUUID()}`,userId=`user_${crypto.randomUUID()}`;
+      const user=await auth.register({companyId,userId,email:p.email,password:p.password,name:p.name||'',role:'owner'});
+      return json(res,201,{user,companyId,role:'owner'});
+    }catch(e){return json(res,e.status||400,{error:e.message,code:e.code||'REGISTER_ERROR'})}
+  }
   if(req.method==='POST'&&url.pathname==='/api/browser/login'){
     try{const {auth}=await getPlatformRuntimeForTests();const p=await body(req);const out=await auth.login(p);const csrf=crypto.randomBytes(24).toString('base64url');const maxAge=Math.max(1,Math.floor((Date.parse(out.session.expiresAt)-Date.now())/1000));const cookieHeaders=[serializeCookie(SESSION_COOKIE,out.token,{httpOnly:true,maxAge,secure:secureCookies()}),serializeCookie(CSRF_COOKIE,csrf,{httpOnly:false,maxAge,secure:secureCookies()})];return json(res,200,{user:out.user,companyId:out.session.companyId,role:out.session.role,csrfToken:csrf},{'Set-Cookie':cookieHeaders});}catch(e){return json(res,e.status||401,{error:e.message,code:e.code||'LOGIN_ERROR'})}
   }
