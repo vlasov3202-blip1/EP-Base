@@ -1,0 +1,49 @@
+name: Restore probe 9ea2752
+
+on:
+  push:
+    branches:
+      - restore/probe-9ea2752
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Inspect candidate
+        run: |
+          echo "COMMIT=$(git rev-parse HEAD)"
+          find . -maxdepth 2 -type f | sort
+      - name: Syntax and project checks
+        run: npm run check
+      - name: Build
+        run: npm run build
+      - name: Start and smoke test
+        run: |
+          node scripts/serve.mjs > /tmp/eineiro-restore-probe.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:3000/ >/tmp/index.html; then break; fi
+            sleep 1
+          done
+          test -s /tmp/index.html
+          grep -qi '<html\|<!doctype' /tmp/index.html
+          echo '--- server log ---'
+          cat /tmp/eineiro-restore-probe.log
+          echo '--- response head ---'
+          head -40 /tmp/index.html
+      - name: Package isolated candidate
+        if: always()
+        run: |
+          tar --exclude=.git -czf /tmp/eineiro-restore-probe-9ea2752.tar.gz .
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eineiro-restore-probe-9ea2752
+          path: /tmp/eineiro-restore-probe-9ea2752.tar.gz
+          retention-days: 3
