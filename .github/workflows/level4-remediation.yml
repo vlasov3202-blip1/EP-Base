@@ -1,0 +1,27 @@
+name: Level 4 Remediation Gate
+
+on:
+  push:
+    branches: [level4-hard-audit-remediation]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  hard-audit-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install
+        run: npm install --ignore-scripts
+      - name: Full Level 4 check
+        run: npm run check
