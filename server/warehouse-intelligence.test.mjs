@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {MemoryRepository} from './core.mjs';
+import {WarehouseIntelligenceService} from './warehouse-intelligence.mjs';
+const ctx={companyId:'c1',userId:'u1',role:'owner'};const repo=new MemoryRepository();const wrap={put:(e,r)=>repo.put(ctx,e,r),get:(e,id)=>repo.get(ctx,e,id),list:e=>repo.list(ctx,e)};
+const svc=new WarehouseIntelligenceService({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T10:00:00Z')});
+const tasks=await svc.prioritize(ctx,{items:[{id:'p1',name:'Двигатель',heavy:true,demand:90,urgency:30,customerWaiting:true},{id:'p2',name:'Дверь',ageDays:120,demand:20,urgency:10}],staff:[{id:'w1',openTasks:4,canHeavy:true},{id:'w2',openTasks:1,canHeavy:false}]});
+assert.equal(tasks.length,2);assert.equal(tasks.find(x=>x.productId==='p1').assigneeId,'w1');
+const guide=await svc.placementGuide(ctx,{product:{id:'p1',name:'Двигатель',heavy:true,demand:90,barcode:'123'},locations:[{id:'L1',zone:'fast',level:2,freeCapacity:99},{id:'L2',zone:'fast',level:1,freeCapacity:50,rack:'A',shelf:'1',cell:'2'}]});
+assert.equal(guide.targetLocationId,'L2');assert.equal(guide.status,'ready');assert.ok(guide.steps.length>=3);
+console.log('EINEIRO warehouse intelligence tests: OK');
