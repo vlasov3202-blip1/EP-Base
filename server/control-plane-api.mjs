@@ -1,0 +1,32 @@
+import {authenticateRequest,getPlatformRuntimeForTests} from './http-api.mjs';
+
+function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(payload));}
+function requireAdmin(ctx){if(ctx.role!=='admin')throw Object.assign(new Error('platform admin required'),{status:403,code:'FORBIDDEN'});}
+async function body(req,{maxBytes=250000}={}){let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>maxBytes)throw Object.assign(new Error('payload too large'),{status:413});chunks.push(c)}return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}')}
+
+async function collect(store){
+  const companyIds=await store.listCompanyIds();const out={companies:[],market:{products:0,offers:0,orders:0,unservedDemand:0},ai:{decisions:0,executed:0,requiresApproval:0,costUnits:0},autonomy:{executedActions:0,humanDecisions:0,score:100},integrations:{connections:0,errors:0},moderation:{open:0,blocked:0},experiments:{tests:0,running:0},featureFlags:{total:0,enabled:0},audit:{events:0},categories:new Map()};
+  for(const companyId of companyIds){const dump=await store.exportCompany(companyId);const rec=dump.records||[];const e=n=>rec.filter(x=>x.__entity===n);const products=e('Product'),offers=e('Offer'),orders=e('Order'),demand=e('UnservedDemand'),decisions=e('Decision'),costs=e('AiCost'),connections=e('ChannelConnection'),mods=e('ModerationCase'),tests=e('MarketingTest'),flags=e('FeatureFlag');
+    for(const p of products){const c=p.categoryId||p.category||'uncategorized';out.categories.set(c,(out.categories.get(c)||0)+1)}
+    out.market.products+=products.length;out.market.offers+=offers.length;out.market.orders+=orders.length;out.market.unservedDemand+=demand.filter(x=>x.status==='open').length;
+    out.ai.decisions+=decisions.length;out.ai.executed+=decisions.filter(x=>x.status==='executed').length;out.ai.requiresApproval+=decisions.filter(x=>x.status==='requires_approval').length;out.ai.costUnits+=costs.reduce((s,x)=>s+Number(x.providerCost||0),0);
+    out.integrations.connections+=connections.filter(x=>x.enabled).length;out.integrations.errors+=connections.filter(x=>x.status==='error').length;out.moderation.open+=mods.filter(x=>x.status!=='resolved').length;out.moderation.blocked+=mods.filter(x=>x.decision==='blocked'||x.status==='blocked').length;out.experiments.tests+=tests.length;out.experiments.running+=tests.filter(x=>x.status==='running').length;out.featureFlags.total+=flags.length;out.featureFlags.enabled+=flags.filter(x=>x.enabled).length;out.audit.events+=(dump.audit||[]).length;
+    out.companies.push({companyId,users:(dump.users||[]).length,products:products.length,offers:offers.length,orders:orders.length,decisions:decisions.length,flags:flags.length,moderation:mods.length});
+  }
+  out.ai.costUnits=Number(out.ai.costUnits.toFixed(4));out.autonomy.executedActions=out.ai.executed;out.autonomy.humanDecisions=out.ai.requiresApproval;const denom=out.ai.executed+out.ai.requiresApproval;out.autonomy.score=denom?Math.round(out.ai.executed/denom*100):100;out.categories=[...out.categories.entries()].map(([id,count])=>({id,count})).sort((a,b)=>b.count-a.count);return out;
+}
+
+export async function handleControlPlaneApi(req,res){
+  const url=new URL(req.url,'http://local');if(!url.pathname.startsWith('/api/v1/control-plane'))return false;
+  try{
+    const ctx=await authenticateRequest(req);requireAdmin(ctx);const {store}=await getPlatformRuntimeForTests();
+    if(req.method==='GET'&&url.pathname==='/api/v1/control-plane')return json(res,200,{...(await collect(store)),generatedAt:new Date().toISOString()});
+    const company=url.searchParams.get('companyId')||ctx.companyId;const repo=store.tenant({companyId,userId:ctx.userId,role:'admin'});
+    if(req.method==='GET'&&url.pathname==='/api/v1/control-plane/feature-flags')return json(res,200,{items:await repo.list('FeatureFlag')});
+    if(req.method==='POST'&&url.pathname==='/api/v1/control-plane/feature-flags'){const p=await body(req);if(!p.id)throw new Error('id required');const rec={...p,id:String(p.id),enabled:Boolean(p.enabled),updatedAt:new Date().toISOString()};await repo.put('FeatureFlag',rec);return json(res,200,{item:rec});}
+    if(req.method==='GET'&&url.pathname==='/api/v1/control-plane/moderation')return json(res,200,{items:await repo.list('ModerationCase')});
+    if(req.method==='GET'&&url.pathname==='/api/v1/control-plane/experiments')return json(res,200,{tests:await repo.list('MarketingTest'),memory:await repo.list('MarketingMemory')});
+    if(req.method==='GET'&&url.pathname==='/api/v1/control-plane/audit')return json(res,200,{items:(await store.exportCompany(company)).audit||[]});
+    return json(res,404,{error:'not found'});
+  }catch(e){return json(res,e.status||500,{error:e.message,code:e.code||'CONTROL_PLANE_ERROR'});}
+}
