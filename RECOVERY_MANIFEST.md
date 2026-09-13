@@ -10,7 +10,9 @@ Status source of truth after repository-history loss. A feature is considered **
 - Market home has no product matrix before a user request.
 - Camera safe zone is immutable and may not be covered, moved, reduced or reused.
 - Camera/voice is the primary Market request interface.
-- Context product dock shows up to 3 relevant offers after a request.
+- Spatial camera shortlist is adaptive: 1, 2 or 3 top candidates may be shown simultaneously depending on confidence/relevance separation.
+- The relevant catalog is NOT limited to 3 products. It contains all genuinely relevant results, paginated/lazy-loaded as needed (up to 100 per page in the current contract, with no artificial total-result cap).
+- Any relevant catalog product can replace the currently placed product while preserving its spatial anchor/position.
 - Spatial anchor persists when replacing a product.
 - Clean View hides UI but keeps the placed product visible.
 - Mobile/tablet/desktop layouts are adaptive, not simple scaled copies.
@@ -41,8 +43,10 @@ Status source of truth after repository-history loss. A feature is considered **
 - Real browser camera via getUserMedia when permission/device allow it
 - Voice request via SpeechRecognition where supported
 - Context classification into scene/category
-- Up to 3 contextual product offers in bottom dock
-- Place/replace product in scene
+- Adaptive 1–3 spatial candidates for immediate in-camera comparison
+- Full relevant catalog after request, separate from the spatial shortlist
+- Relevant catalog supports large result sets and selection of any result for placement/replacement
+- Place/replace product in scene while preserving the spatial placement concept
 - Clean View
 - Category-aware scene switching
 
@@ -143,9 +147,10 @@ Status source of truth after repository-history loss. A feature is considered **
 - Voice/context length limiting
 - Explicit instruction to ignore personal identifiers and focus on product-relevant context
 - Confidence gate: low-confidence requests return one clarification instead of product search
-- Search service contract with maximum 3 returned offers
+- Full relevant catalog contract with pagination / up to 100 results per page and no artificial total cap
+- Adaptive spatial shortlist derived from the highest-relevance catalog results (1–3 simultaneous candidates)
 - Tenant-scoped audit/events for vision resolution
-- Automated frame/minimization/confidence/search-limit tests wired into `npm run check`
+- Automated frame/minimization/confidence/full-catalog/spatial-shortlist tests wired into `npm run check`
 
 ## Required production restoration still pending
 These were part of the agreed product but still need runtime/provider implementation:
@@ -158,7 +163,7 @@ These were part of the agreed product but still need runtime/provider implementa
 - Production transport-company provider credentials/API wiring; logistics contract/service exists
 - Import/migration center for external CRM CSV/XML
 - Product Graph / universal category schema persistence
-- Search/recommendation service implementation behind the Vision search contract
+- Production search/recommendation index behind the restored full-catalog search contract
 - Queues/workers beyond inbox delivery dispatch
 - Observability/health metrics
 - Automated per-company/platform backups and disaster recovery
