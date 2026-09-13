@@ -23,7 +23,13 @@ export class JsonFileStore{
   listEvents(companyId){return this.db.events.filter(x=>x.companyId===companyId).map(structuredClone);}
   listAllApiKeys(){return Object.values(this.db.records||{}).filter(x=>x&&x.hash&&x.companyId&&x.id).map(structuredClone);}
   listCompanyIds(){const ids=new Set();for(const u of Object.values(this.db.users||{}))if(u?.companyId)ids.add(u.companyId);for(const r of Object.values(this.db.records||{}))if(r?.companyId)ids.add(r.companyId);return [...ids].sort();}
-  exportCompany(companyId){const records=Object.values(this.db.records||{}).filter(x=>x?.companyId===companyId).map(structuredClone);const users=Object.values(this.db.users||{}).filter(x=>x?.companyId===companyId).map(structuredClone);return {companyId,users,records,audit:this.listAudit(companyId),events:this.listEvents(companyId),exportedAt:new Date().toISOString()};}
+  exportCompany(companyId){
+    const prefix=`${companyId}:`;const records=Object.entries(this.db.records||{}).filter(([,v])=>v?.companyId===companyId).map(([key,value])=>{const rest=key.startsWith(prefix)?key.slice(prefix.length):key;const i=rest.indexOf(':');const entity=i>=0?rest.slice(0,i):'Unknown',recordId=i>=0?rest.slice(i+1):value.id;return{...structuredClone(value),__entity:entity,__recordId:recordId};});
+    const users=Object.values(this.db.users||{}).filter(x=>x?.companyId===companyId).map(structuredClone);
+    const unifiedAudit=records.filter(x=>x.__entity==='UnifiedAudit').map(stripMeta);const platformEvents=records.filter(x=>x.__entity==='PlatformEvent').map(stripMeta);
+    const audit=[...this.listAudit(companyId),...unifiedAudit].sort(byTime);const events=[...this.listEvents(companyId),...platformEvents].sort(byTime);
+    return {companyId,users,records,audit,events,exportedAt:new Date().toISOString()};
+  }
 }
 
 export class DurableTenantRepository{
@@ -33,3 +39,6 @@ export class DurableTenantRepository{
   list(entity){const prefix=`${this.companyId}:${entity}:`;return Object.entries(this.store.db.records).filter(([k])=>k.startsWith(prefix)).map(([,v])=>structuredClone(v));}
   async remove(entity,id){delete this.store.db.records[tenantKey(this.companyId,entity,id)];await this.store.flush();}
 }
+
+function stripMeta(value){const {__entity,__recordId,...rest}=value;return rest;}
+function byTime(a,b){return Date.parse(a.createdAt||a.at||a.updatedAt||0)-Date.parse(b.createdAt||b.at||b.updatedAt||0);}
