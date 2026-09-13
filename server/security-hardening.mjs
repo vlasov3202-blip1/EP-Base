@@ -1,0 +1,26 @@
+import crypto from 'node:crypto';
+
+function matches(grant,cap){return grant==='*'||grant===cap||(grant.endsWith('*')&&cap.startsWith(grant.slice(0,-1)));}
+
+export class CapabilityAccessService{
+  constructor({repoFactory,roleCapabilities={}}={}){if(typeof repoFactory!=='function')throw new Error('repoFactory required');this.repoFactory=repoFactory;this.roleCapabilities=roleCapabilities;}
+  async resolve(ctx,{identityId=ctx.identityId,companyId=ctx.companyId,role=ctx.role}={}){
+    const repo=this.repoFactory(ctx);const memberships=(await repo.list('CompanyMembership')).filter(x=>x.identityId===identityId&&x.companyId===companyId&&x.status==='active');
+    const membership=memberships.find(x=>x.role===role)||memberships[0]||null;
+    const grants=[...(this.roleCapabilities[role]||[]),...(membership?.capabilities||[])];return{membership,grants:[...new Set(grants)]};
+  }
+  async require(ctx,capability,opts={}){const {membership,grants}=await this.resolve(ctx,opts);if(!membership&&!ctx.role)throw Object.assign(new Error('membership required'),{code:'MEMBERSHIP_REQUIRED'});if(!grants.some(g=>matches(g,capability)))throw Object.assign(new Error(`forbidden:${capability}`),{code:'FORBIDDEN_CAPABILITY'});return{membership,capability};}
+}
+
+export class SecurityControlService{
+  constructor({repoFactory,now=()=>new Date(),stepUpTtlMs=10*60*1000,attemptWindowMs=15*60*1000,maxAttempts=5}={}){if(typeof repoFactory!=='function')throw new Error('repoFactory required');this.repoFactory=repoFactory;this.now=now;this.stepUpTtlMs=stepUpTtlMs;this.attemptWindowMs=attemptWindowMs;this.maxAttempts=maxAttempts;}
+  async recordAttempt(ctx,{subject,kind='login',success=false,meta={}}={}){if(!subject)throw new Error('subject required');const repo=this.repoFactory(ctx);const now=this.now();const recent=(await repo.list('SecurityAttempt')).filter(x=>x.subject===subject&&x.kind===kind&&Date.parse(x.at)>=now.getTime()-this.attemptWindowMs);if(!success&&recent.filter(x=>!x.success).length>=this.maxAttempts)throw Object.assign(new Error('too many attempts'),{code:'RATE_LIMITED'});const rec={id:`secatt_${crypto.randomUUID()}`,subject,kind,success:Boolean(success),meta:structuredClone(meta),at:now.toISOString()};await repo.put('SecurityAttempt',rec);return rec;}
+  async issueStepUp(ctx,{identityId,sessionId,method='password',risk='HIGH'}={}){if(!identityId||!sessionId)throw new Error('identityId/sessionId required');const repo=this.repoFactory(ctx);const now=this.now();const rec={id:`step_${crypto.randomUUID()}`,identityId,sessionId,method,risk,status:'verified',verifiedAt:now.toISOString(),expiresAt:new Date(now.getTime()+this.stepUpTtlMs).toISOString()};await repo.put('StepUpAuthentication',rec);return rec;}
+  async requireStepUp(ctx,{identityId,sessionId,maxRisk='HIGH'}={}){const repo=this.repoFactory(ctx);const now=this.now().getTime();const matches=(await repo.list('StepUpAuthentication')).filter(x=>x.identityId===identityId&&x.sessionId===sessionId&&x.status==='verified'&&Date.parse(x.expiresAt)>now);if(!matches.length)throw Object.assign(new Error('step-up authentication required'),{code:'STEP_UP_REQUIRED',risk:maxRisk});return matches.sort((a,b)=>Date.parse(b.verifiedAt)-Date.parse(a.verifiedAt))[0];}
+  async registerSession(ctx,{identityId,sessionId,device={},ipHash=null,userAgentHash=null}={}){if(!identityId||!sessionId)throw new Error('identityId/sessionId required');const repo=this.repoFactory(ctx);const rec={id:`sec:${sessionId}`,identityId,sessionId,device:structuredClone(device),ipHash,userAgentHash,status:'active',createdAt:this.now().toISOString(),lastSeenAt:this.now().toISOString()};await repo.put('SecuritySession',rec);return rec;}
+  async listSessions(ctx,identityId){return (await this.repoFactory(ctx).list('SecuritySession')).filter(x=>x.identityId===identityId&&x.status==='active');}
+  async revokeSession(ctx,{identityId,sessionId,reason='user'}={}){const repo=this.repoFactory(ctx);const id=`sec:${sessionId}`;const rec=await repo.get('SecuritySession',id);if(!rec||rec.identityId!==identityId)throw new Error('session not found');const next={...rec,status:'revoked',revokeReason:reason,revokedAt:this.now().toISOString()};await repo.put('SecuritySession',next);return next;}
+  async emergencyRevoke(ctx,{identityId,reason='security'}={}){const repo=this.repoFactory(ctx);const sessions=(await repo.list('SecuritySession')).filter(x=>x.identityId===identityId&&x.status==='active');const revoked=[];for(const s of sessions){const next={...s,status:'revoked',revokeReason:reason,revokedAt:this.now().toISOString()};await repo.put('SecuritySession',next);revoked.push(next);}await repo.put('SecurityEvent',{id:`secevt_${crypto.randomUUID()}`,identityId,type:'EMERGENCY_REVOKE',reason,count:revoked.length,at:this.now().toISOString()});return revoked;}
+  async setMfaPolicy(ctx,{companyId,roles=[],required=true}={}){const repo=this.repoFactory(ctx);const rec={id:`mfa:${companyId}`,companyId,roles:[...new Set(roles)],required:Boolean(required),updatedAt:this.now().toISOString()};await repo.put('MfaPolicy',rec);return rec;}
+  async requiresMfa(ctx,{companyId,role}={}){const p=await this.repoFactory(ctx).get('MfaPolicy',`mfa:${companyId}`);return Boolean(p?.required&&p.roles?.includes(role));}
+}
