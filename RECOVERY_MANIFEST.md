@@ -80,21 +80,33 @@ Status source of truth after repository-history loss. A feature is considered **
 - Runtime data files excluded from Git
 - Automated core/auth/storage tests wired into `npm run check`
 
+### Unified Inbox backend
+- Provider-neutral connector registry
+- Normalized inbound message model
+- Inbound deduplication by channel + external message ID
+- Tenant-scoped inbox persistence
+- Outbound queue with client request idempotency key
+- Anti-double-send protection
+- Delivery status tracking: queued / retry / sent / failed
+- Exponential retry/backoff for transient send failures
+- Terminal failure after configurable max attempts
+- Tenant-scoped inbox events and audit entries
+- Automated dedup/idempotency/retry tests wired into `npm run check`
+
 ## Required production restoration still pending
 These were part of the agreed product but still need runtime/provider implementation:
 - Production database adapter (PostgreSQL or equivalent) and deployment migrations; durable provider-neutral adapter exists
 - HTTP/API authentication middleware and cookie/header transport; session service exists
 - Real OpenAI multimodal gateway and provider abstraction runtime
 - Vision frame sampling/anonymization pipeline
-- Real Avito/Drom/Farpost/Auto.ru/VK/Youla/Zzap connectors and webhooks/polling
-- Unified Inbox backend with deduplication, retries and anti-double-send
+- Real Avito/Drom/Farpost/Auto.ru/VK/Youla/Zzap adapters and provider webhook/polling wiring; provider-neutral connector runtime exists
 - Marketplace transaction backend
 - Acquiring/payment provider integration
 - Transport-company shipment creation and tracking APIs
 - Import/migration center for external CRM CSV/XML
 - Product Graph / universal category schema persistence
 - Search/recommendation service
-- Queues/workers
+- Queues/workers beyond the current inbox delivery queue
 - Observability/health metrics
 - Automated per-company/platform backups and disaster recovery
 - Platform API for third-party CRMs
