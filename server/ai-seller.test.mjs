@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {MemoryRepository} from './core.mjs';
+import {AiSellerService} from './ai-seller.mjs';
+const ctx={companyId:'c1',userId:'u1',role:'owner'};const repo=new MemoryRepository();const wrap={put:(e,r)=>repo.put(ctx,e,r),get:(e,id)=>repo.get(ctx,e,id),list:e=>repo.list(ctx,e)};
+repo.put(ctx,'Product',{id:'p1',name:'Фара',status:'listed',price:25000,warranty:{days:14}});
+const svc=new AiSellerService({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T10:00:00Z')});
+await svc.setDuty(ctx,{sellerId:'s1',from:'09:00',to:'18:00'});assert.equal(repo.list(ctx,'SellerDuty').length,1);
+const r=await svc.suggestReply(ctx,{conversationId:'c1',customerQuestion:'Есть доставка и скидка?',productId:'p1'});assert.ok(r.reply.includes('доставка'));assert.ok(r.reply.includes('скидка'));assert.ok(r.reply.includes('25000'));
+const f=await svc.followUp(ctx,{conversationId:'c1',delayMinutes:20});assert.equal(f.status,'scheduled');
+const l=await svc.improveListing(ctx,{productId:'p1',title:'Фара',facts:{condition:'б/у',side:'right'}});assert.equal(l.rule,'facts_only');
+console.log('EINEIRO AI seller tests: OK');
