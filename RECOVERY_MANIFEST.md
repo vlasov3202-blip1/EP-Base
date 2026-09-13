@@ -45,14 +45,17 @@ Status source of truth after repository-history loss. A feature is considered **
 - Camera-first entry
 - Real browser camera via getUserMedia when permission/device allow it
 - Voice request via SpeechRecognition where supported
+- Short camera-frame burst instead of continuous video upload
+- Browser -> `/api/vision/resolve` bridge
 - Request decomposition into independent scene slots
 - One selected product per requested scene object
 - Multi-object composition: e.g. shelf + vase + book appear simultaneously as three different objects, not variants
 - Independent full variant catalog per scene slot
+- Per-slot pagination through `/api/search/slots`
 - Replace-in-place for a slot while preserving its anchor
 - No artificial cap on total relevant variants per slot; paginated/lazy-loaded catalog contract
 - Clean View keeps all placed products visible
-- Context-aware scene switching
+- Local development fallback is clearly separate from the real AI path
 
 ### Admin
 - Platform-control surface
@@ -87,6 +90,15 @@ Status source of truth after repository-history loss. A feature is considered **
 - Tenant-scoped durable repository reload verification
 - Runtime data files excluded from Git
 - Automated core/auth/storage tests wired into `npm run check`
+
+### Search / recommendation runtime
+- Provider-neutral SearchService
+- Normalized relevance ordering
+- Independent `searchSlots` execution for multiple scene objects
+- One current top offer per slot plus full per-slot catalog
+- Per-slot cursor pagination
+- Reference catalog source for runtime/dev validation
+- Automated independent-slot and pagination tests
 
 ### Unified Inbox backend
 - Provider-neutral connector registry
@@ -163,13 +175,12 @@ These were part of the agreed product but still need runtime/provider implementa
 - Production database adapter (PostgreSQL or equivalent) and deployment migrations; durable provider-neutral adapter exists
 - HTTP/API authentication middleware and cookie/header transport; session service exists
 - Pixel-level redaction provider for faces/license plates before external AI calls; metadata minimization hook exists
-- Market HTTP/API bridge from browser camera to VisionSearchService
 - Real Avito/Drom/Farpost/Auto.ru/VK/Youla/Zzap provider adapters and credentials/webhook wiring; contracts/runtime now exist
 - Production acquiring provider credentials/webhook wiring; payment contract/service exists
 - Production transport-company provider credentials/API wiring; logistics contract/service exists
 - Import/migration center for external CRM CSV/XML
 - Product Graph / universal category schema persistence
-- Production search/recommendation index behind the restored per-slot catalog search contract
+- Production search/recommendation index replacing the current reference catalog source
 - Queues/workers beyond inbox delivery dispatch
 - Observability/health metrics
 - Automated per-company/platform backups and disaster recovery
