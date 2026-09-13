@@ -63,12 +63,19 @@ Status source of truth after repository-history loss. A feature is considered **
 - Product invariants in code
 - Platform-layer registry
 
+### Server core
+- Multi-company tenant key isolation
+- Server-side RBAC permission checks
+- Tenant-scoped repository interface with in-memory reference implementation
+- Tenant-scoped event bus
+- Tenant-scoped audit log
+- Owner decision escalation gate by confidence / limits / legal / financial / anomaly reasons
+- Automated core tests wired into `npm run check`
+
 ## Required production restoration still pending
-These were part of the agreed product but need server-side/runtime implementation rather than UI/state simulation:
-- Persistent server database and migrations
+These were part of the agreed product but still need runtime/provider implementation:
+- Persistent server database and migrations (repository contract exists; durable adapter pending)
 - Authentication/session management
-- Enforced RBAC/permissions server-side
-- Multi-company tenant isolation
 - Real OpenAI multimodal gateway and provider abstraction runtime
 - Vision frame sampling/anonymization pipeline
 - Real Avito/Drom/Farpost/Auto.ru/VK/Youla/Zzap connectors and webhooks/polling
