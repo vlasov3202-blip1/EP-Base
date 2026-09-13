@@ -6,6 +6,7 @@ import { handlePlatformApi } from '../server/http-api.mjs';
 import { handleChannelApi } from '../server/channel-api.mjs';
 import { handleReliabilityApi } from '../server/reliability-api.mjs';
 import { handleBrowserSession } from '../server/browser-session.mjs';
+import { startBackgroundRuntime } from '../server/background-runtime.mjs';
 
 const port = Number(process.env.EP_BASE_PORT || 4173);
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript' };
@@ -34,6 +35,7 @@ createServer(async (request, response) => {
     response.writeHead(404);
     response.end('Not found');
   }
-}).listen(port, '0.0.0.0', () => {
+}).listen(port, '0.0.0.0', async () => {
   console.log(`EINEIRO запущен: http://localhost:${port}`);
+  await startBackgroundRuntime().catch(error=>console.error('Не удалось запустить фоновые задачи:',error.message));
 });
