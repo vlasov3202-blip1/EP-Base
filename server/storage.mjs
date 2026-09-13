@@ -39,6 +39,7 @@ export class JsonFileStore{
   listAudit(companyId){return this.db.audit.filter(x=>x.companyId===companyId).map(structuredClone);}
   async appendEvent(event){this.db.events.push(structuredClone(event));await this.flush();}
   listEvents(companyId){return this.db.events.filter(x=>x.companyId===companyId).map(structuredClone);}
+  listAllApiKeys(){return Object.values(this.db.records||{}).filter(x=>x&&x.hash&&x.companyId&&x.id).map(structuredClone);}
 }
 
 export class DurableTenantRepository{
