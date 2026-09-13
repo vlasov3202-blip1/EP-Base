@@ -84,7 +84,9 @@ export class PostgresStore{
       this.pool.query('SELECT data FROM eineiro_audit WHERE company_id=$1 ORDER BY id',[companyId]),
       this.pool.query('SELECT data FROM eineiro_events WHERE company_id=$1 ORDER BY id',[companyId])
     ]);
-    return {companyId,users:users.rows.map(r=>r.data),records:records.rows.map(r=>({...r.data,__entity:r.entity,__recordId:r.record_id})),audit:audit.rows.map(r=>r.data),events:events.rows.map(r=>r.data),exportedAt:new Date().toISOString()};
+    const recordRows=records.rows.map(r=>({...r.data,__entity:r.entity,__recordId:r.record_id}));
+    const unifiedAudit=recordRows.filter(x=>x.__entity==='UnifiedAudit').map(stripRecordMeta);const platformEvents=recordRows.filter(x=>x.__entity==='PlatformEvent').map(stripRecordMeta);
+    return {companyId,users:users.rows.map(r=>r.data),records:recordRows,audit:[...audit.rows.map(r=>r.data),...unifiedAudit].sort(byTime),events:[...events.rows.map(r=>r.data),...platformEvents].sort(byTime),exportedAt:new Date().toISOString()};
   }
 }
 
@@ -102,5 +104,7 @@ export async function createPostgresStore(connectionString=process.env.DATABASE_
   const pool=new Pool({connectionString,max:Number(process.env.DATABASE_POOL_MAX||20),ssl:process.env.DATABASE_SSL==='true'?{rejectUnauthorized:false}:undefined});
   const store=await new PostgresStore(pool).init();store.close=()=>pool.end();return store;
 }
+function stripRecordMeta(value){const {__entity,__recordId,...rest}=value;return rest;}
+function byTime(a,b){return Date.parse(a.createdAt||a.at||a.updatedAt||0)-Date.parse(b.createdAt||b.at||b.updatedAt||0);}
 
 export {MIGRATIONS};
