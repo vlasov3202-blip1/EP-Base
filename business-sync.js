@@ -1,5 +1,5 @@
 const STATE_KEY='eineiro-business-v2';
-const HASH_KEY='eineiro-business-server-hash-v2';
+const HASH_KEY='eineiro-business-server-hash-v3';
 function hashText(text){let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)}return String(h>>>0)}
 function locationText(p){const l=p.location||p.storage||{};if(typeof l==='string')return l;return [l.zone,l.rack,l.shelf,l.cell].filter(Boolean).join('-')||p.storageAddress||'—'}
 
@@ -12,11 +12,14 @@ async function sync(){
   const exceptions=(s.exceptions||[]).map(x=>({id:x.id,type:x.type||'exception',title:x.title||'Исключение',detail:x.detail||'',severity:x.severity||'warn',requiresOwner:Boolean(x.requiresOwner)}));
   const integrations=(s.channels||[]).map(x=>({name:x.channel,enabled:x.enabled!==false,status:x.status||'not checked'}));
   const leads=(s.leads||[]).map(l=>({id:l.id,customer:l.customer||l.customerName||'Клиент',request:l.request||l.product||'Запрос',firstResponse:Number(l.firstResponse||0),status:l.status||'open',discount:Number(l.discount||0),assignee:l.assignee||l.assigneeId||'Команда',margin:Number(l.margin||0),followup:Boolean(l.followup)}));
+  const orders=(s.orders||[]).map(o=>({id:o.id,buyer:o.buyer||o.customerName||'Клиент',items:o.items||o.itemCount||'',amount:Number(o.total||o.amount||0),status:o.status||'created',source:o.source||'market',createdAt:o.createdAt||null}));
+  const payments=(s.payments||[]).map(p=>({id:p.id,orderId:p.orderId,amount:Number(p.amount||0),status:p.status||'pending',provider:p.provider||'',refundedAmount:Number(p.refundedAmount||0)}));
+  const shipments=(s.shipments||[]).map(x=>({id:x.id,orderId:x.orderId,status:x.status||'created',provider:x.provider||'',trackingNumber:x.trackingNumber||'',trackingUrl:x.trackingUrl||'',updatedAt:x.updatedAt||x.createdAt||null}));
   const finance=s.finance||current.finance||{income:0,expenses:0,mandatory:0,optional:0,cashflow:0};
   const marketing=(s.marketing||[]).map(c=>({id:c.id,name:c.name,channel:c.channel,spent:Number(c.spent||0),leads:Number(c.leads||0),orders:Number(c.orders||0),revenue:Number(c.revenue||0),roas:c.roas==null?null:Number(c.roas),statusSignal:c.statusSignal||'unknown'}));
   const operations=s.operations||{signals:[],summary:{}};
-  const next={...current,meta:{...(current.meta||{}),role:s.role||current.meta?.role||'owner',autonomy:Number(s.autonomy??current.meta?.autonomy??0)},products:products.length?products:(current.products||[]),tasks:tasks.length?tasks:(current.tasks||[]),exceptions,integrations,leads:leads.length?leads:(current.leads||[]),finance,marketing,operations};
-  const payload={products:next.products,tasks:next.tasks,exceptions:next.exceptions,integrations:next.integrations,leads:next.leads,finance:next.finance,marketing:next.marketing,operations:next.operations,autonomy:next.meta.autonomy};const h=hashText(JSON.stringify(payload));
+  const next={...current,meta:{...(current.meta||{}),role:s.role||current.meta?.role||'owner',autonomy:Number(s.autonomy??current.meta?.autonomy??0)},products:products.length?products:(current.products||[]),tasks:tasks.length?tasks:(current.tasks||[]),exceptions,integrations,leads:leads.length?leads:(current.leads||[]),orders,payments,shipments,finance,marketing,operations};
+  const payload={products:next.products,tasks:next.tasks,exceptions:next.exceptions,integrations:next.integrations,leads:next.leads,orders:next.orders,payments:next.payments,shipments:next.shipments,finance:next.finance,marketing:next.marketing,operations:next.operations,autonomy:next.meta.autonomy};const h=hashText(JSON.stringify(payload));
   if(sessionStorage.getItem(HASH_KEY)!==h){localStorage.setItem(STATE_KEY,JSON.stringify(next));sessionStorage.setItem(HASH_KEY,h);location.reload();}
  }catch{}
 }
