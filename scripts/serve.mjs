@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
+import { basename, dirname, extname, resolve } from 'node:path';
 import { handleMarketApi } from '../server/market-api.mjs';
 import { handlePlatformApi } from '../server/http-api.mjs';
 import { handleChannelApi } from '../server/channel-api.mjs';
@@ -15,7 +15,21 @@ import { handleBusinessApi } from '../server/business-api.mjs';
 import { startBackgroundRuntime } from '../server/background-runtime.mjs';
 
 const port = Number(process.env.EP_BASE_PORT || 4173);
-const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript' };
+const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' };
+const publicRoot = resolve(process.cwd());
+const publicExtensions = new Set(Object.keys(types));
+
+function publicFileFromRequest(requestUrl = '/') {
+  const url = new URL(requestUrl, 'http://local');
+  const decoded = decodeURIComponent(url.pathname);
+  const requested = decoded === '/' ? 'index.html' : decoded.replace(/^\/+/, '');
+  if (!requested || requested !== basename(requested) || requested.startsWith('.')) throw new Error('not public');
+  const extension = extname(requested).toLowerCase();
+  if (!publicExtensions.has(extension)) throw new Error('not public');
+  const file = resolve(publicRoot, requested);
+  if (dirname(file) !== publicRoot) throw new Error('not public');
+  return { file, extension };
+}
 
 createServer(async (request, response) => {
   try {
@@ -43,15 +57,16 @@ createServer(async (request, response) => {
       const marketHandled = await handleMarketApi(request, response);
       if (marketHandled !== false) return;
     }
-    const pathname = request.url?.split('?')[0] || '/';
-    const requested = pathname === '/' ? '/index.html' : pathname;
-    const path = normalize(join(process.cwd(), requested));
-    if (!path.startsWith(process.cwd())) throw new Error('Invalid path');
-    const body = await readFile(path);
-    response.writeHead(200, { 'Content-Type': `${types[extname(path)] || 'application/octet-stream'}; charset=utf-8` });
+    const { file, extension } = publicFileFromRequest(request.url);
+    const body = await readFile(file);
+    response.writeHead(200, {
+      'Content-Type': `${types[extension]}; charset=utf-8`,
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'same-origin'
+    });
     response.end(body);
   } catch {
-    response.writeHead(404);
+    response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8', 'X-Content-Type-Options': 'nosniff' });
     response.end('Not found');
   }
 }).listen(port, '0.0.0.0', async () => {
