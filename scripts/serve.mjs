@@ -4,6 +4,7 @@ import { extname, join, normalize } from 'node:path';
 import { handleMarketApi } from '../server/market-api.mjs';
 import { handlePlatformApi } from '../server/http-api.mjs';
 import { handleChannelApi } from '../server/channel-api.mjs';
+import { handleInboxApi } from '../server/inbox-api.mjs';
 import { handleReliabilityApi } from '../server/reliability-api.mjs';
 import { handleBrowserSession } from '../server/browser-session.mjs';
 import { handleAdminApi } from '../server/admin-api.mjs';
@@ -22,6 +23,8 @@ createServer(async (request, response) => {
       if (adminHandled !== false) return;
       const businessHandled = await handleBusinessApi(request, response);
       if (businessHandled !== false) return;
+      const inboxHandled = await handleInboxApi(request, response);
+      if (inboxHandled !== false) return;
       const reliabilityHandled = await handleReliabilityApi(request, response);
       if (reliabilityHandled !== false) return;
       const channelHandled = await handleChannelApi(request, response);
