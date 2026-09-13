@@ -113,6 +113,25 @@ Status source of truth after repository-history loss. A feature is considered **
 - Order/shipment audit + event emission
 - Automated connector/order lifecycle tests wired into `npm run check`
 
+### Payments backend
+- Provider-neutral payment registry
+- Tenant-scoped payment persistence
+- Payment create/sync lifecycle
+- Idempotent payment creation
+- Partial/full refund support
+- Idempotent refunds
+- Payment/refund audit + event emission
+
+### Logistics backend
+- Provider-neutral logistics registry
+- Tenant-scoped shipment persistence
+- Idempotent shipment creation
+- Tracking number / tracking URL / ETA synchronization
+- Shipment history
+- Shipment cancellation contract
+- Shipment audit + event emission
+- Automated payments/logistics tests wired into `npm run check`
+
 ## Required production restoration still pending
 These were part of the agreed product but still need runtime/provider implementation:
 - Production database adapter (PostgreSQL or equivalent) and deployment migrations; durable provider-neutral adapter exists
@@ -120,8 +139,8 @@ These were part of the agreed product but still need runtime/provider implementa
 - Real OpenAI multimodal gateway and provider abstraction runtime
 - Vision frame sampling/anonymization pipeline
 - Real Avito/Drom/Farpost/Auto.ru/VK/Youla/Zzap provider adapters and credentials/webhook wiring; contracts/runtime now exist
-- Production acquiring/payment provider integration
-- Production transport-company shipment creation and tracking providers
+- Production acquiring provider credentials/webhook wiring; payment contract/service exists
+- Production transport-company provider credentials/API wiring; logistics contract/service exists
 - Import/migration center for external CRM CSV/XML
 - Product Graph / universal category schema persistence
 - Search/recommendation service
