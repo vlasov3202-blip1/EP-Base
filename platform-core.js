@@ -17,7 +17,15 @@ export const decisionPipeline=['event','facts','policy','confidence','decision',
 export const ownerDecisionReasons=['limit_exceeded','low_confidence','legal_confirmation','financial_confirmation','serious_anomaly'];
 export const connectors={publishing:['avito','drom','farpost','auto_ru','vk','youla','zzap','eineiro_market'],messaging:['avito','vk','youla','eineiro_market'],pilot:['ozon','wildberries','olx_kz']};
 export const aiProviders={primary:'openai',fallback:[],currencyLabel:'у.е.',exposeModelName:false};
-export const invariants={saleCommissionPercent:0,cameraSafeZone:'immutable',marketHome:'no_catalog_before_request',spatialSimultaneousCandidates:{min:1,max:3,adaptive:true},relevantCatalog:{maxPerPage:100,paginated:true,noArtificialTotalCap:true},cleanViewKeepsPlacedProduct:true,exceptionManagement:true};
+export const invariants={
+  saleCommissionPercent:0,
+  cameraSafeZone:'immutable',
+  marketHome:'no_catalog_before_request',
+  sceneSlots:{oneSelectedProductPerRequestedObject:true,countDrivenByUserIntent:true,noArtificialObjectCap:true},
+  variantsPerSlot:{paginated:true,maxPerPage:100,noArtificialTotalCap:true,replaceKeepsAnchor:true},
+  cleanViewKeepsPlacedProducts:true,
+  exceptionManagement:true
+};
 export const platformLayers=['Universal Core','Category Schema / Domain Modules','Event Layer','Decision Layer','Policy Layer','Audit Layer','Connector Framework','AI Provider Abstraction','Control Plane','Search / Recommendation / Vision','Market Transactions','Backups / DR','Observability','Queues / Workers','Platform API'];
 export function can(role,permission){const grants=roles[role]||[];return grants.includes('*')||grants.includes(permission)||grants.some(x=>x.endsWith('*')&&permission.startsWith(x.slice(0,-1)))}
 export function planAllows(plan,capability){const p=plans[plan]||plans.Start;return Boolean(p[capability])}
