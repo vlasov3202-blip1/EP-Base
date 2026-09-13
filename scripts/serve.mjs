@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { handleMarketApi } from '../server/market-api.mjs';
+import { handlePlatformApi } from '../server/http-api.mjs';
 
 const port = Number(process.env.EP_BASE_PORT || 4173);
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript' };
@@ -9,8 +10,10 @@ const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascrip
 createServer(async (request, response) => {
   try {
     if (request.url?.startsWith('/api/')) {
-      const handled = await handleMarketApi(request, response);
-      if (handled !== false) return;
+      const platformHandled = await handlePlatformApi(request, response);
+      if (platformHandled !== false) return;
+      const marketHandled = await handleMarketApi(request, response);
+      if (marketHandled !== false) return;
     }
     const requested = request.url === '/' ? '/index.html' : request.url.split('?')[0];
     const path = normalize(join(process.cwd(), requested));
