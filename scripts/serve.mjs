@@ -1,12 +1,17 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
+import { handleMarketApi } from '../server/market-api.mjs';
 
 const port = Number(process.env.EP_BASE_PORT || 4173);
-const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' };
+const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript' };
 
 createServer(async (request, response) => {
   try {
+    if (request.url?.startsWith('/api/')) {
+      const handled = await handleMarketApi(request, response);
+      if (handled !== false) return;
+    }
     const requested = request.url === '/' ? '/index.html' : request.url.split('?')[0];
     const path = normalize(join(process.cwd(), requested));
     if (!path.startsWith(process.cwd())) throw new Error('Invalid path');
@@ -18,5 +23,5 @@ createServer(async (request, response) => {
     response.end('Not found');
   }
 }).listen(port, '0.0.0.0', () => {
-  console.log(`EP Base запущен: http://localhost:${port}`);
+  console.log(`EINEIRO запущен: http://localhost:${port}`);
 });
