@@ -2,5 +2,6 @@ dist/
 .DS_Store
 node_modules/
 data/
+backups/
 *.db.json
 *.db.json.tmp
