@@ -93,20 +93,39 @@ Status source of truth after repository-history loss. A feature is considered **
 - Tenant-scoped inbox events and audit entries
 - Automated dedup/idempotency/retry tests wired into `npm run check`
 
+### Connector runtime
+- Base adapter contract with declared capabilities
+- Provider registry
+- Normalized webhook contract
+- Polling contract with cursor support
+- Outbox dispatch through provider adapters
+- Webhook/polling audit + event emission
+- Default adapter slots for EINEIRO Market, Avito, VK, Youla, Drom, Farpost, Auto.ru and Zzap
+
+### Marketplace transaction backend
+- Tenant-scoped order persistence
+- Order item normalization and totals
+- Lifecycle: created -> accepted -> packing -> shipped -> delivered / returned / cancelled
+- Illegal state-transition protection
+- Shipment creation contract
+- Tracking synchronization contract
+- In-memory shipment provider reference implementation
+- Order/shipment audit + event emission
+- Automated connector/order lifecycle tests wired into `npm run check`
+
 ## Required production restoration still pending
 These were part of the agreed product but still need runtime/provider implementation:
 - Production database adapter (PostgreSQL or equivalent) and deployment migrations; durable provider-neutral adapter exists
 - HTTP/API authentication middleware and cookie/header transport; session service exists
 - Real OpenAI multimodal gateway and provider abstraction runtime
 - Vision frame sampling/anonymization pipeline
-- Real Avito/Drom/Farpost/Auto.ru/VK/Youla/Zzap adapters and provider webhook/polling wiring; provider-neutral connector runtime exists
-- Marketplace transaction backend
-- Acquiring/payment provider integration
-- Transport-company shipment creation and tracking APIs
+- Real Avito/Drom/Farpost/Auto.ru/VK/Youla/Zzap provider adapters and credentials/webhook wiring; contracts/runtime now exist
+- Production acquiring/payment provider integration
+- Production transport-company shipment creation and tracking providers
 - Import/migration center for external CRM CSV/XML
 - Product Graph / universal category schema persistence
 - Search/recommendation service
-- Queues/workers beyond the current inbox delivery queue
+- Queues/workers beyond inbox delivery dispatch
 - Observability/health metrics
 - Automated per-company/platform backups and disaster recovery
 - Platform API for third-party CRMs
