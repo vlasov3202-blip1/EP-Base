@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {MemoryRepository} from './core.mjs';
+import {OperationsBrain} from './operations-brain.mjs';
+const ctx={companyId:'c1',userId:'owner',role:'owner'};const repo=new MemoryRepository();const wrap={put:(e,r)=>repo.put(ctx,e,r),get:(e,id)=>repo.get(ctx,e,id),list:e=>repo.list(ctx,e)};
+repo.put(ctx,'MarketingCampaign',{id:'m1',status:'active',spent:10000,revenue:8000});
+repo.put(ctx,'Lead',{id:'l1',firstResponse:8,status:'qualified'});
+repo.put(ctx,'Product',{id:'p1',name:'Товар',demand:90,stock:1});
+repo.put(ctx,'Order',{id:'o1',status:'created'});
+repo.put(ctx,'Shipment',{id:'s1',status:'in_transit',updatedAt:'2026-09-10T00:00:00Z'});
+repo.put(ctx,'FinanceEntry',{id:'f1',type:'income',amount:5000});repo.put(ctx,'FinanceEntry',{id:'f2',type:'expense',amount:9000});
+repo.put(ctx,'Task',{id:'t1',status:'failed'});repo.put(ctx,'Task',{id:'t2',status:'failed'});repo.put(ctx,'Task',{id:'t3',status:'failed'});
+const brain=new OperationsBrain({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T12:00:00Z')});
+const p=await brain.plan(ctx);assert.ok(p.signals.some(x=>x.domain==='marketing'));assert.ok(p.signals.some(x=>x.domain==='sales'));assert.ok(p.signals.some(x=>x.domain==='warehouse'));assert.ok(p.signals.some(x=>x.domain==='payments'));assert.ok(p.signals.some(x=>x.domain==='logistics'));assert.ok(p.signals.some(x=>x.domain==='finance'));assert.ok(p.actions.length>=6);assert.ok(repo.list(ctx,'Exception').some(x=>x.requiresOwner));
+console.log('EINEIRO operations brain tests: OK');
