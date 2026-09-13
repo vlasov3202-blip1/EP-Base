@@ -34,6 +34,18 @@ This file is the source of truth after repository-history loss. A feature is con
 - Unified Inbox user interface and Market order workflow.
 - Start / Pilot / Autopilot plans and 7-day grace capability model.
 - Roles, permissions and audit surfaces.
+- Contextual onboarding: the normal interface is shown immediately, the screen is dimmed around one highlighted control, and short explanations move through important functions without a human trainer.
+- Owner view separates routine notifications from decisions that truly require the owner.
+- 30-day forecast and external-signal cards restored as owner context rather than automatic commands.
+- Morning owner report shows business state, AI actions, estimated extra sales and whether intervention is required.
+
+### AI operations / management by exceptions
+- Employee-correction chain restored: warning -> hint -> task -> verification -> retraining -> owner escalation.
+- Correction steps may create staff tasks, personal training assignments and owner exceptions with estimated loss.
+- Warehouse planning can propose moves using demand, age, heavy-item safety and fast/slow zones.
+- 30-day forecast record combines internal metrics with external signals.
+- Morning report keeps routine AI actions separate from material owner decisions.
+- Automated tests cover correction escalation, training assignment, warehouse moves, forecast creation and owner report behavior.
 
 ### Market / spatial search
 - Camera-first entry with browser camera support.
@@ -50,6 +62,11 @@ This file is the source of truth after repository-history loss. A feature is con
 - Product Graph context improves ranking of related objects without changing slot identity.
 - Clean View keeps all placed products visible.
 - Local development fallback is clearly separate from the real AI path.
+- Visual capability model restored: standard media, 360 object, spatial placement, wall placement, body try-on, face try-on, vehicle try-on and measured 3D.
+- Scene packs restored for room, garage, desk, body, face and measured-space contexts.
+- Scan patterns differ by scene type instead of using one generic scanner effect everywhere.
+- Phone, tablet and desktop use different camera-safe-zone geometry and catalog/control composition.
+- Product visual assets carry isolation/3D readiness state so poor raw photos can be normalized before spatial placement.
 
 ### Multimodal AI search
 - Provider-neutral VisionSearchService.
