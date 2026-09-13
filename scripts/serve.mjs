@@ -10,6 +10,7 @@ import { handlePromotionApi } from '../server/promotion-api.mjs';
 import { handleReliabilityApi } from '../server/reliability-api.mjs';
 import { handleBrowserSession } from '../server/browser-session.mjs';
 import { handleAdminApi } from '../server/admin-api.mjs';
+import { handleControlPlaneApi } from '../server/control-plane-api.mjs';
 import { handleBusinessApi } from '../server/business-api.mjs';
 import { startBackgroundRuntime } from '../server/background-runtime.mjs';
 
@@ -21,6 +22,8 @@ createServer(async (request, response) => {
     if (request.url?.startsWith('/api/')) {
       const browserHandled = await handleBrowserSession(request, response);
       if (browserHandled !== false) return;
+      const controlPlaneHandled = await handleControlPlaneApi(request, response);
+      if (controlPlaneHandled !== false) return;
       const adminHandled = await handleAdminApi(request, response);
       if (adminHandled !== false) return;
       const businessHandled = await handleBusinessApi(request, response);
