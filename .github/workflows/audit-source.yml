@@ -1,0 +1,31 @@
+name: Isolated audit source snapshot
+on:
+  push:
+    branches: ['audit/level4-recheck-20260913']
+    paths: ['.github/workflows/audit-source.yml']
+permissions:
+  contents: read
+jobs:
+  source-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 3c1a4c8f5135784cc7ad4920a472f5147eaa2341
+          persist-credentials: false
+      - name: Archive tracked source only, do not execute application
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/eineiro-audit"
+          test "$(git rev-parse HEAD)" = '3c1a4c8f5135784cc7ad4920a472f5147eaa2341'
+          git archive --format=tar HEAD > "$RUNNER_TEMP/eineiro-audit/source.tar"
+          git rev-parse HEAD > "$RUNNER_TEMP/eineiro-audit/commit.txt"
+          sha256sum "$RUNNER_TEMP/eineiro-audit/source.tar" > "$RUNNER_TEMP/eineiro-audit/source.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eineiro-audit-source-3c1a4c8
+          path: ${{ runner.temp }}/eineiro-audit/
+          retention-days: 3
+          if-no-files-found: error
