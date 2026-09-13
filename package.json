@@ -1,13 +1,13 @@
 {
   "name": "eineiro-platform",
-  "version": "0.16.0-recovery",
+  "version": "0.16.1-recovery",
   "private": true,
   "description": "EINEIRO universal commerce platform recovery build",
   "type": "module",
   "scripts": {
     "dev": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
-    "check": "node --check app.js && node --check market.js && node --check admin.js && node --check business-addons.js && node --check platform-core.js && node --check server/market-api.mjs && node --check server/http-api.mjs && node --check server/postgres-storage.mjs && node --check server/channel-adapters.mjs && node --check server/channel-config.mjs && node --check server/channel-api.mjs && node --check server/durable-queue.mjs && node --check server/postgres-backup.mjs && node --check server/reliability-api.mjs && node server/core.test.mjs && node server/auth-storage.test.mjs && node server/inbox.test.mjs && node server/connectors-orders.test.mjs && node server/payments-logistics.test.mjs && node server/vision-ai.test.mjs && node server/search.test.mjs && node server/product-graph.test.mjs && node server/http-api.test.mjs && node server/api-import.test.mjs && node server/infra.test.mjs && node server/postgres-storage.test.mjs && node server/channel-adapters.test.mjs && node server/channel-config.test.mjs && node server/durable-queue.test.mjs && node scripts/check.mjs"
+    "check": "node --check app.js && node --check market.js && node --check admin.js && node --check business-addons.js && node --check platform-core.js && node --check server/market-api.mjs && node --check server/http-api.mjs && node --check server/postgres-storage.mjs && node --check server/channel-adapters.mjs && node --check server/channel-config.mjs && node --check server/channel-api.mjs && node --check server/live-channels.mjs && node --check server/avito-adapter.mjs && node --check server/durable-queue.mjs && node --check server/postgres-backup.mjs && node --check server/reliability-api.mjs && node server/core.test.mjs && node server/auth-storage.test.mjs && node server/inbox.test.mjs && node server/connectors-orders.test.mjs && node server/payments-logistics.test.mjs && node server/vision-ai.test.mjs && node server/search.test.mjs && node server/product-graph.test.mjs && node server/http-api.test.mjs && node server/api-import.test.mjs && node server/infra.test.mjs && node server/postgres-storage.test.mjs && node server/channel-adapters.test.mjs && node server/channel-config.test.mjs && node server/avito-adapter.test.mjs && node server/durable-queue.test.mjs && node scripts/check.mjs"
   },
   "dependencies": {
     "pg": "^8.13.1"
