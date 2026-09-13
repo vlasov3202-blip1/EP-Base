@@ -22,8 +22,8 @@ export class ProductGraph {
     const rel={from,to,type,weight:Number(weight)||1,meta:structuredClone(meta)};this.#relations.push(rel);return structuredClone(rel);
   }
   get(id){const p=this.#products.get(id);return p?structuredClone(p):null;}
-  list(){return [...this.#products.values()].map(structuredClone);}
-  relationsFor(id,type=null){return this.#relations.filter(r=>(r.from===id||r.to===id)&&(!type||r.type===type)).map(structuredClone);}
+  list(){return [...this.#products.values()].map(value=>structuredClone(value));}
+  relationsFor(id,type=null){return this.#relations.filter(r=>(r.from===id||r.to===id)&&(!type||r.type===type)).map(value=>structuredClone(value));}
   validateCategory(product){
     const [root,leaf]=String(product.category).split('.');const schema=UNIVERSAL_CATEGORY_SCHEMA[root]?.children?.[leaf];
     if(!schema)return {ok:false,errors:['unknown_category']};
