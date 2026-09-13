@@ -7,6 +7,7 @@ import { handleChannelApi } from '../server/channel-api.mjs';
 import { handleReliabilityApi } from '../server/reliability-api.mjs';
 import { handleBrowserSession } from '../server/browser-session.mjs';
 import { handleAdminApi } from '../server/admin-api.mjs';
+import { handleBusinessApi } from '../server/business-api.mjs';
 import { startBackgroundRuntime } from '../server/background-runtime.mjs';
 
 const port = Number(process.env.EP_BASE_PORT || 4173);
@@ -19,6 +20,8 @@ createServer(async (request, response) => {
       if (browserHandled !== false) return;
       const adminHandled = await handleAdminApi(request, response);
       if (adminHandled !== false) return;
+      const businessHandled = await handleBusinessApi(request, response);
+      if (businessHandled !== false) return;
       const reliabilityHandled = await handleReliabilityApi(request, response);
       if (reliabilityHandled !== false) return;
       const channelHandled = await handleChannelApi(request, response);
