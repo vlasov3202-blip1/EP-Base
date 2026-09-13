@@ -3,6 +3,7 @@ import {assertCan} from './core.mjs';
 import {ApiKeyService} from './api-keys.mjs';
 import {ImportService} from './importer.mjs';
 import {createInfrastructure} from './infra.mjs';
+import {CompanyBackupService} from './company-backup.mjs';
 import {createDataStore} from './database.mjs';
 import path from 'node:path';
 
@@ -17,15 +18,14 @@ async function runtime(){
     const importer=new ImportService({repoFactory:ctx=>store.tenant(ctx)});
     const usesPostgres=Boolean(process.env.DATABASE_URL);
     const infra=createInfrastructure({dataFile:usesPostgres?null:DATA_FILE,backupDir:BACKUP_DIR});
+    const companyBackups=new CompanyBackupService({store,backupDir:path.join(BACKUP_DIR,'companies')});
     infra.health.register('storage',async()=>{
       if(usesPostgres){await store.pool.query('SELECT 1');return{status:'ok',type:'postgresql'};}
       return{status:store.db?'ok':'down',type:'file',schemaVersion:store.db?.meta?.schemaVersion||null};
     });
-    if(infra.backups){
-      infra.queue.register('backup.platform',async()=>infra.backups.create({scope:'platform'}));
-      infra.queue.register('backup.company',async job=>infra.backups.create({scope:'company',companyId:job.payload.companyId}));
-    }
-    return{store,auth,apiKeys,importer,infra,usesPostgres};
+    if(infra.backups)infra.queue.register('backup.platform',async()=>infra.backups.create({scope:'platform'}));
+    infra.queue.register('backup.company',async job=>companyBackups.create(job.payload.companyId));
+    return{store,auth,apiKeys,importer,infra,companyBackups,usesPostgres};
   })();
   return runtimePromise;
 }
@@ -37,6 +37,7 @@ export async function authenticateRequest(req){const {auth,apiKeys}=await runtim
 function scopeFor(resource,method){const base={products:'products',orders:'orders',tasks:'tasks',messages:'messages',events:'events',audit:'audit'}[resource];return `${base}:${method==='GET'?'read':'write'}`}
 async function authorize(req,{permission=null,scope=null}={}){const ctx=await authenticateRequest(req);if(ctx.role==='api'){const {apiKeys}=await runtime();apiKeys.requireScope(ctx,scope);return ctx}if(permission)assertCan(ctx,permission);return ctx}
 function adminOnly(ctx){if(ctx.role!=='owner'&&ctx.role!=='admin')throw Object.assign(new Error('owner/admin required'),{status:403,code:'FORBIDDEN'});}
+function platformAdminOnly(ctx){if(ctx.role!=='admin')throw Object.assign(new Error('platform admin required'),{status:403,code:'FORBIDDEN'});}
 
 export async function handlePlatformApi(req,res){
   const url=new URL(req.url,'http://local');
@@ -47,7 +48,7 @@ export async function handlePlatformApi(req,res){
 
   if(req.method==='GET'&&url.pathname==='/health')return finish(200,await rt.infra.health.check());
   if(req.method==='GET'&&url.pathname==='/metrics'){
-    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:read'});adminOnly(ctx);return finish(200,{metrics:rt.infra.metrics.snapshot(),queue:rt.infra.queue.stats()});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'METRICS_FORBIDDEN'})}
+    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:read'});platformAdminOnly(ctx);return finish(200,{metrics:rt.infra.metrics.snapshot(),queue:rt.infra.queue.stats()});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'METRICS_FORBIDDEN'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/auth/register'){
     try{const p=await body(req);const user=await rt.auth.registerPublic(p);return finish(201,{user});}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'REGISTER_ERROR'})}
@@ -65,22 +66,25 @@ export async function handlePlatformApi(req,res){
     try{const ctx=await authenticateRequest(req);return finish(200,{companyId:ctx.companyId,role:ctx.role,user:ctx.user||null,apiKeyId:ctx.apiKeyId||null,scopes:ctx.scopes||null,rateLimit:ctx.rateLimit||null});}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'AUTH_REQUIRED'})}
   }
   if(req.method==='GET'&&url.pathname==='/api/v1/platform/queue'){
-    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:read'});adminOnly(ctx);return finish(200,{stats:rt.infra.queue.stats(),items:rt.infra.queue.list(ctx)});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'QUEUE_FORBIDDEN'})}
+    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:read'});platformAdminOnly(ctx);return finish(200,{stats:rt.infra.queue.stats(),items:rt.infra.queue.list(ctx)});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'QUEUE_FORBIDDEN'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/v1/platform/queue/run'){
-    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:write'});adminOnly(ctx);const p=await body(req).catch(()=>({}));const items=await rt.infra.queue.work({limit:Math.max(1,Math.min(Number(p.limit)||10,100))});return finish(200,{items,stats:rt.infra.queue.stats()});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'QUEUE_FORBIDDEN'})}
-  }
-  if(url.pathname.startsWith('/api/v1/platform/backups')&&rt.usesPostgres){
-    return finish(501,{error:'Для PostgreSQL требуется внешнее резервное копирование на уровне инфраструктуры',code:'POSTGRES_BACKUP_EXTERNAL'});
+    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:write'});platformAdminOnly(ctx);const p=await body(req).catch(()=>({}));const items=await rt.infra.queue.work({limit:Math.max(1,Math.min(Number(p.limit)||10,100))});return finish(200,{items,stats:rt.infra.queue.stats()});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'QUEUE_FORBIDDEN'})}
   }
   if(req.method==='GET'&&url.pathname==='/api/v1/platform/backups'){
-    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:read'});adminOnly(ctx);return finish(200,{items:await rt.infra.backups.list()});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'BACKUP_FORBIDDEN'})}
+    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:read'});platformAdminOnly(ctx);if(!rt.infra.backups)return finish(501,{error:'Для PostgreSQL platform backup выполняется на уровне инфраструктуры',code:'POSTGRES_BACKUP_EXTERNAL'});return finish(200,{items:await rt.infra.backups.list()});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'BACKUP_FORBIDDEN'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/v1/platform/backups'){
-    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:write'});adminOnly(ctx);const p=await body(req).catch(()=>({}));const job=rt.infra.queue.enqueue(ctx,p.scope==='company'?'backup.company':'backup.platform',{companyId:p.companyId||ctx.companyId});return finish(202,{job});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'BACKUP_FORBIDDEN'})}
+    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:write'});platformAdminOnly(ctx);const p=await body(req).catch(()=>({}));if(p.scope==='company'){if(!p.companyId)throw Object.assign(new Error('companyId required'),{status:400});const job=rt.infra.queue.enqueue(ctx,'backup.company',{companyId:p.companyId});return finish(202,{job});}if(!rt.infra.backups)return finish(501,{error:'Для PostgreSQL platform backup выполняется на уровне инфраструктуры',code:'POSTGRES_BACKUP_EXTERNAL'});const job=rt.infra.queue.enqueue(ctx,'backup.platform',{});return finish(202,{job});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'BACKUP_FORBIDDEN'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/v1/platform/backups/restore'){
-    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:write'});adminOnly(ctx);const p=await body(req);if(!p.file)throw Object.assign(new Error('file required'),{status:400});const result=await rt.infra.backups.restore(p.file);return finish(200,result);}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'RESTORE_ERROR'})}
+    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:write'});platformAdminOnly(ctx);if(!rt.infra.backups)return finish(501,{error:'Для PostgreSQL platform restore выполняется на уровне инфраструктуры',code:'POSTGRES_BACKUP_EXTERNAL'});const p=await body(req);if(!p.file)throw Object.assign(new Error('file required'),{status:400});const result=await rt.infra.backups.restore(p.file);return finish(200,result);}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'RESTORE_ERROR'})}
+  }
+  if(req.method==='GET'&&url.pathname==='/api/v1/company/backups'){
+    try{const ctx=await authenticateRequest(req);adminOnly(ctx);return finish(200,{items:await rt.companyBackups.list(ctx.companyId)});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'COMPANY_BACKUP_FORBIDDEN'})}
+  }
+  if(req.method==='POST'&&url.pathname==='/api/v1/company/backups'){
+    try{const ctx=await authenticateRequest(req);adminOnly(ctx);return finish(201,{backup:await rt.companyBackups.create(ctx.companyId)});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'COMPANY_BACKUP_ERROR'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/v1/api-keys'){
     try{const ctx=await authorize(req,{permission:'*'});adminOnly(ctx);const p=await body(req);return finish(201,{apiKey:await rt.apiKeys.create(ctx,p)});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'API_KEY_ERROR'})}
