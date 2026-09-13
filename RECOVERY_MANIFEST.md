@@ -218,6 +218,24 @@ Status source of truth after repository-history loss. A feature is considered **
 - Tenant-scoped audit/events for vision resolution
 - Automated tests for shelf + vase + book decomposition, independent catalogs, current-offer selection, minimization and confidence gating
 
+### Infrastructure runtime
+- Provider-neutral in-process job queue
+- Typed worker handlers
+- Delayed jobs and exponential retry/backoff
+- Max-attempt terminal failure handling
+- Tenant-scoped job listing
+- Queue statistics for Admin/observability
+- Metrics registry with counters, gauges, latency observations, averages and p95
+- Health registry with component-level `ok` / `degraded` / `down` state
+- Public lightweight `/health` endpoint
+- Protected `/metrics` and queue Admin endpoints
+- Platform/company backup jobs through the queue
+- Atomic runtime data backups with metadata
+- Backup listing, retention pruning and restore contract
+- Protected Admin backup create/list/restore endpoints
+- Runtime backup directory excluded from Git
+- Automated queue/retry/metrics/health/backup/restore tests wired into `npm run check`
+
 ## Required production restoration still pending
 These were part of the agreed product but still need runtime/provider implementation:
 - Production database adapter (PostgreSQL or equivalent) and deployment migrations; durable provider-neutral adapter exists
@@ -227,10 +245,10 @@ These were part of the agreed product but still need runtime/provider implementa
 - Production acquiring provider credentials/webhook wiring; payment contract/service exists
 - Production transport-company provider credentials/API wiring; logistics contract/service exists
 - OAuth 2.0 authorization flow for third-party integrations; scoped API keys already exist
+- Production-scale external queue/worker backend for horizontal scaling; in-process queue runtime exists
+- Production metrics/log shipping backend and alert delivery; health/metrics runtime exists
+- Off-host/object-storage backup replication and automated DR verification; local backup/restore runtime exists
 - Production-scale external search index (OpenSearch/Elasticsearch/vector or equivalent) replacing the in-process Product Graph index when scale requires it
-- Queues/workers beyond inbox delivery dispatch
-- Observability/health metrics
-- Automated per-company/platform backups and disaster recovery
 - Mobile-app packaging/publication pipeline
 
 ## Plans
