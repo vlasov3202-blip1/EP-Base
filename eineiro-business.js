@@ -1,0 +1,79 @@
+const root=document.querySelector('#app');
+const KEY='eineiro-business-v2';
+const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+const money=v=>new Intl.NumberFormat('ru-RU').format(Math.round(Number(v)||0))+' ₽';
+
+const seed={
+ meta:{role:'owner',autonomy:92,ai:true,plan:'Autopilot'},
+ exceptions:[
+  {id:'E1',type:'margin',title:'Цена ниже допустимого диапазона',detail:'Заказ O-2041 · требуется решение владельца',severity:'bad',requiresOwner:true},
+  {id:'E2',type:'sla',title:'Нарушен срок ответа',detail:'Диалог C-881 · 7 минут',severity:'warn',requiresOwner:false},
+  {id:'E3',type:'stock',title:'Риск дефицита',detail:'Категория «расходные материалы» · запас на 5 дней',severity:'warn',requiresOwner:false}
+ ],
+ tasks:[
+  {id:'T1',title:'Проверить заказ O-2041',owner:'Продажи',priority:'high',status:'todo',source:'ИИ-директор'},
+  {id:'T2',title:'Пополнить быструю зону склада',owner:'Склад',priority:'normal',status:'progress',source:'ИИ-склад'},
+  {id:'T3',title:'Повторно связаться с клиентом C-879',owner:'Продажи',priority:'high',status:'todo',source:'ИИ-РОП'}
+ ],
+ products:[
+  {id:'P-1001',name:'Полка Oak 90',category:'Дом',price:12900,minPrice:11500,optimalPrice:13400,status:'published',age:21,demand:78,location:'A-01-02-03'},
+  {id:'P-1002',name:'Монитор 32 4K Pro',category:'Техника',price:54900,minPrice:51800,optimalPrice:56700,status:'published',age:14,demand:86,location:'B-02-01-04'},
+  {id:'P-1003',name:'Кресло Oslo',category:'Дом',price:34900,minPrice:31500,optimalPrice:36200,status:'ready',age:47,demand:66,location:'A-03-02-01'},
+  {id:'P-1004',name:'Фара правая Focus III',category:'Автозапчасти',price:25900,minPrice:23800,optimalPrice:26700,status:'published',age:33,demand:83,location:'C-01-01-02'}
+ ],
+ leads:[
+  {id:'L1',customer:'Клиент · Market',request:'Полка + декор',firstResponse:2,status:'qualified',discount:0,assignee:'Анна',margin:32,followup:true},
+  {id:'L2',customer:'Клиент · Avito',request:'Монитор 32',firstResponse:4,status:'won',discount:3,assignee:'Илья',margin:28,followup:true},
+  {id:'L3',customer:'Клиент · Market',request:'Кресло',firstResponse:7,status:'attention',discount:9,assignee:'Анна',margin:19,followup:false}
+ ],
+ staff:[
+  {name:'Анна',role:'seller',score:91,qualified:42,sales:19,response:3.2},
+  {name:'Илья',role:'seller',score:87,qualified:36,sales:16,response:4.1},
+  {name:'Мария',role:'warehouse',score:94,qualified:0,sales:0,response:0}
+ ],
+ aiEvents:[
+  {time:'10:42',text:'Перераспределил 2 обращения по загрузке',impact:'срок ответа'},
+  {time:'10:18',text:'Вернул клиента повторным касанием',impact:'+ 18 400 ₽'},
+  {time:'09:57',text:'Остановил скидку ниже минимальной цены',impact:'+ 3 200 ₽'},
+  {time:'09:21',text:'Создал задачу складу по риску дефицита',impact:'авто'}
+ ],
+ finance:{income:812000,expenses:421000,mandatory:91000,optional:37000,cashflow:263000},
+ integrations:[
+  {name:'EINEIRO Market',enabled:true,status:'online'},
+  {name:'Avito',enabled:true,status:'configured'},
+  {name:'VK',enabled:false,status:'not configured'},
+  {name:'Youla',enabled:false,status:'not configured'},
+  {name:'Drom / Farpost',enabled:false,status:'not configured'},
+  {name:'Auto.ru',enabled:false,status:'not configured'},
+  {name:'Zzap',enabled:false,status:'not configured'}
+ ]
+};
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||structuredClone(seed)}catch{return structuredClone(seed)}}
+let data=load();const save=()=>localStorage.setItem(KEY,JSON.stringify(data));
+let ui={view:'dashboard'};
+
+const nav=[
+ ['dashboard','Главная','◎'],['sales','Продажи','◉'],['tasks','Задачи','✓'],['price','Цены','₽'],['warehouse','Склад','▦'],['products','Товары','□'],['analytics','Аналитика','⌁'],['finance','Финансы','◌'],['integrations','Подключения','⌘']
+];
+const titles={
+ dashboard:['Главная','Оперативное состояние и исключения'],sales:['Продажи','Контроль скорости, качества и маржи'],tasks:['Задачи','Распределение и контроль исполнения'],price:['Цены','Оптимальная цена, минимум и согласования'],warehouse:['Склад','Зоны, стеллажи, полки и ячейки'],products:['Товары','Универсальный каталог и публикации'],analytics:['Аналитика','Стратегия, прогноз и причины'],finance:['Финансы','Денежный поток и расходы'],integrations:['Подключения','Каналы, обмен данными и состояние связи']
+};
+
+function shell(){const [t,s]=titles[ui.view];return `<div class="shell"><aside class="sidebar"><div class="brand"><div class="brand-mark">E</div><div class="brand-copy"><strong>EINEIRO</strong><span>Business</span></div></div><div class="sidebar-label">Командный центр</div><nav class="nav">${nav.map(([id,label,ic])=>`<button class="nav-button ${ui.view===id?'active':''}" data-action="nav" data-view="${id}"><span style="width:19px;text-align:center">${ic}</span><span>${label}</span></button>`).join('')}</nav><div class="sidebar-footer"><div class="eyebrow">АВТОПИЛОТ</div><p>${data.meta.ai?'ИИ включён · управление по исключениям':'ИИ выключен · ручной режим'}</p></div></aside><main class="content"><header class="topbar"><div class="top-title"><h1>${t}</h1><p>${s}</p></div><div class="top-actions"><button class="core-btn ai" data-action="toggle-ai">${data.meta.ai?'ИИ включён':'ИИ выключен'}</button></div></header><div id="view-root">${view()}</div></main></div>`}
+function render(){root.innerHTML=shell()}
+function view(){return ({dashboard,sales,tasks,price,warehouse,products,analytics,finance,integrations}[ui.view]||dashboard)()}
+
+function businessState(){const material=data.exceptions.filter(x=>x.requiresOwner||x.severity==='bad');return material.length?{label:'Требуется решение',kind:'bad',count:material.length}:{label:'Вмешательство не требуется',kind:'good',count:0}}
+function dashboard(){const st=businessState();const open=data.tasks.filter(x=>x.status!=='done').length;const slow=data.leads.filter(x=>x.firstResponse>5).length;return `<section class="view"><article class="core-card director"><div><span class="core-badge ai">ИИ-ДИРЕКТОР</span><h2>${esc(st.label)}</h2><p>Система не показывает нормальные процессы как проблему. На главную поднимаются только существенные отклонения и решения.</p></div><div class="autonomy-ring" style="--p:${data.meta.autonomy}%"><div><strong>${data.meta.autonomy}%</strong><span>автономность</span></div></div></article><div class="core-grid cols-4" style="margin-top:14px"><article class="core-card"><span class="core-badge ${st.kind}">Решения</span><div class="core-kpi">${st.count}</div><div class="core-sub">нужны владельцу</div></article><article class="core-card"><span class="core-badge ${slow?'warn':'good'}">Ответы</span><div class="core-kpi">${slow}</div><div class="core-sub">дольше 5 минут</div></article><article class="core-card"><span class="core-badge ai">ИИ</span><div class="core-kpi">${data.aiEvents.length}</div><div class="core-sub">действия сегодня</div></article><article class="core-card"><span class="core-badge warn">Задачи</span><div class="core-kpi">${open}</div><div class="core-sub">открыто</div></article></div><div class="core-grid cols-2" style="margin-top:14px"><article class="core-card"><div class="eyebrow">ТРЕБУЕТ РЕШЕНИЯ</div>${data.exceptions.filter(x=>x.requiresOwner).map(x=>`<div class="exception-row"><span class="core-badge ${x.severity}">${esc(x.type)}</span><div><div class="row-title">${esc(x.title)}</div><div class="row-meta">${esc(x.detail)}</div></div><button class="core-btn" data-action="resolve" data-id="${x.id}">Решено</button></div>`).join('')||'<div class="core-sub">Вмешательство не требуется.</div>'}</article><article class="core-card"><div class="eyebrow">ДЕЙСТВИЯ СИСТЕМЫ</div>${data.aiEvents.map(x=>`<div class="ai-event"><span class="core-badge ai">ИИ</span><div><div class="row-title">${esc(x.text)}</div><div class="row-meta">${esc(x.impact)}</div></div><time>${x.time}</time></div>`).join('')}</article></div></section>`}
+function sales(){return `<section class="view"><div class="core-grid cols-4"><article class="core-card"><div class="eyebrow">Первый ответ</div><div class="core-kpi">≤ 5 мин</div></article><article class="core-card"><div class="eyebrow">Повторный</div><div class="core-kpi">≤ 10 мин</div></article><article class="core-card"><div class="eyebrow">Без причины</div><div class="core-kpi">0</div></article><article class="core-card"><div class="eyebrow">Автоконтроль</div><div class="core-kpi">ON</div></article></div><article class="core-card" style="margin-top:14px">${data.leads.map(l=>`<div class="lead-row"><div><div class="row-title">${esc(l.customer)}</div><div class="row-meta">${esc(l.request)} · ${esc(l.assignee)}</div></div><div><span class="core-badge ${l.firstResponse<=5?'good':'bad'}">${l.firstResponse} мин</span><div class="row-meta">первый ответ</div></div><div><div class="row-title">${l.margin}%</div><div class="row-meta">маржа · скидка ${l.discount}%</div></div><span class="core-badge ${l.followup?'good':'warn'}">${l.followup?'повтор есть':'нужен повтор'}</span></div>`).join('')}</article><article class="core-card" style="margin-top:14px"><div class="eyebrow">КОМАНДА</div>${data.staff.map(s=>`<div class="integration-row"><div><div class="row-title">${esc(s.name)}</div><div class="row-meta">${esc(s.role)} · оценка ${s.score}</div></div><span>${s.sales?`${s.sales} продаж · ${s.response} мин`:'склад'}</span></div>`).join('')}</article></section>`}
+function tasks(){return `<section class="view"><article class="core-card">${data.tasks.map(t=>`<div class="task-row"><span class="core-badge ${t.priority==='high'?'bad':'warn'}">${esc(t.priority)}</span><div><div class="row-title">${esc(t.title)}</div><div class="row-meta">${esc(t.owner)} · ${esc(t.source)}</div></div><select data-action="task-status" data-id="${t.id}"><option value="todo" ${t.status==='todo'?'selected':''}>Принято</option><option value="progress" ${t.status==='progress'?'selected':''}>В работе</option><option value="done" ${t.status==='done'?'selected':''}>Готово</option><option value="failed" ${t.status==='failed'?'selected':''}>Не выполнено</option></select></div>`).join('')}</article></section>`}
+function price(){return `<section class="view"><article class="core-card"><div class="eyebrow">КОНТРОЛЬ ЦЕН</div>${data.products.map(p=>`<div class="price-row"><div><div class="row-title">${esc(p.name)}</div><div class="row-meta">${esc(p.category)}</div></div><div><div class="row-meta">минимум</div><b>${money(p.minPrice)}</b></div><div><div class="row-meta">сейчас</div><b>${money(p.price)}</b></div><div><div class="row-meta">оптимум</div><b>${money(p.optimalPrice)}</b></div><button class="core-btn ai" data-action="price-apply" data-id="${p.id}">Применить</button></div>`).join('')}</article></section>`}
+function warehouse(){return `<section class="view"><div class="core-grid cols-3"><article class="core-card"><div class="eyebrow">Структура</div><div class="core-kpi">4 уровня</div><div class="core-sub">зона → стеллаж → полка → ячейка</div></article><article class="core-card"><div class="eyebrow">Навигация</div><div class="core-kpi">ИИ</div><div class="core-sub">куда отнести и положить</div></article><article class="core-card"><div class="eyebrow">Подтверждение</div><div class="core-kpi">Фото / код</div></article></div><article class="core-card" style="margin-top:14px">${data.products.map(p=>`<div class="integration-row"><div><div class="row-title">${esc(p.name)}</div><div class="row-meta">${esc(p.category)} · ${p.age} дней · спрос ${p.demand}</div></div><span class="core-badge">${esc(p.location)}</span></div>`).join('')}</article></section>`}
+function products(){return `<section class="view"><article class="core-card"><div class="core-topline"><div><div class="eyebrow">УНИВЕРСАЛЬНЫЙ КАТАЛОГ</div><h3>Товары разных отраслей в одном ядре</h3></div></div>${data.products.map(p=>`<div class="integration-row"><div><div class="row-title">${esc(p.name)}</div><div class="row-meta">${esc(p.category)} · ${p.id}</div></div><span>${money(p.price)}</span><span class="core-badge ${p.status==='published'?'good':'warn'}">${esc(p.status)}</span></div>`).join('')}</article></section>`}
+function analytics(){return `<section class="view"><div class="core-grid cols-3"><article class="core-card"><div class="eyebrow">Прогноз</div><div class="core-kpi">30 дней</div><div class="core-sub">спрос, остатки, внешние сигналы</div></article><article class="core-card"><div class="eyebrow">Сильная сторона</div><div class="core-kpi">Ответы</div><div class="core-sub">большинство в пределах цели</div></article><article class="core-card"><div class="eyebrow">Слабое место</div><div class="core-kpi">Остатки</div><div class="core-sub">есть риск дефицита</div></article></div><article class="core-card" style="margin-top:14px"><div class="eyebrow">СТРАТЕГИЧЕСКИЕ РЕШЕНИЯ</div><div class="ai-event"><span class="core-badge ai">ИИ</span><div><div class="row-title">Перенести больше запаса ликвидных товаров в быструю зону</div><div class="row-meta">основание: спрос + скорость отбора</div></div></div><div class="ai-event"><span class="core-badge warn">сигнал</span><div><div class="row-title">Стоимость доставки растёт</div><div class="row-meta">учесть в прогнозе маржи, не менять цены автоматически без правила</div></div></div></article></section>`}
+function finance(){return `<section class="view"><div class="core-grid cols-4"><article class="core-card"><div class="eyebrow">Доход</div><div class="core-kpi">${money(data.finance.income)}</div></article><article class="core-card"><div class="eyebrow">Расход</div><div class="core-kpi">${money(data.finance.expenses)}</div></article><article class="core-card"><div class="eyebrow">Обязательные</div><div class="core-kpi">${money(data.finance.mandatory)}</div></article><article class="core-card"><div class="eyebrow">Поток</div><div class="core-kpi">${money(data.finance.cashflow)}</div></article></div><article class="core-card" style="margin-top:14px"><div class="alert-note">Комиссия EINEIRO за продажу: 0%. Эквайринг, логистика, возвраты и платные услуги показываются отдельно.</div></article></section>`}
+function integrations(){return `<section class="view"><article class="core-card"><div class="eyebrow">ЦЕНТР ПОДКЛЮЧЕНИЙ</div>${data.integrations.map(i=>`<div class="integration-row"><div class="row-title">${esc(i.name)}</div><span class="core-badge ${i.status==='online'||i.status==='configured'?'good':'warn'}">${esc(i.status)}</span></div>`).join('')}</article></section>`}
+
+root.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;const a=b.dataset.action;if(a==='nav'){ui.view=b.dataset.view;render()}if(a==='toggle-ai'){data.meta.ai=!data.meta.ai;save();render()}if(a==='resolve'){data.exceptions=data.exceptions.filter(x=>x.id!==b.dataset.id);save();render()}if(a==='price-apply'){const p=data.products.find(x=>x.id===b.dataset.id);if(p){p.price=p.optimalPrice;save();render()}}});
+root.addEventListener('change',e=>{const x=e.target.closest('[data-action="task-status"]');if(!x)return;const t=data.tasks.find(y=>y.id===x.dataset.id);if(t){t.status=x.value;save()}});
+render();
