@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {MemoryRepository} from './core.mjs';
+import {UnservedDemandService} from './unserved-demand.mjs';
+import {ProcurementService} from './procurement.mjs';
+import {FulfillmentService} from './fulfillment.mjs';
+import {ReturnService,DisagreementService} from './returns-disagreements.mjs';
+
+const ctx={companyId:'c1',userId:'owner',role:'owner'};const repo=new MemoryRepository();const wrap={put:(e,r)=>repo.put(ctx,e,r),get:(e,id)=>repo.get(ctx,e,id),list:e=>repo.list(ctx,e)};
+const demand=new UnservedDemandService({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T12:00:00Z')});await demand.record(ctx,{intent:{category:'home.chair',saved:true,notifyWhenAvailable:true},region:'Москва',budget:30000,waitWillingness:true,preorderWillingness:true});assert.equal((await demand.cluster(ctx))[0].averageStrength>50,true);
+const procurement=new ProcurementService({repoFactory:()=>wrap,financeGate:async()=>({decision:'ALLOW'}),warehouseGate:async()=>({decision:'ALLOW'}),policyGate:async()=>({decision:'ALLOW'}),now:()=>new Date('2026-09-13T12:00:00Z')});const pp=await procurement.propose(ctx,{productId:'p1',quantity:2,unitCost:10000});const po=await procurement.confirm(ctx,pp.id);assert.equal(po.status,'created');
+const fulfillment=new FulfillmentService({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T12:00:00Z')});await fulfillment.registerOperator(ctx,{id:'op1',name:'Партнёр',types:['LogisticsOperator'],rating:95});await fulfillment.addLocation(ctx,{id:'loc1',operatorId:'op1',region:'Москва',capabilities:['delivery'],capacity:100,load:20});await fulfillment.addServiceOffer(ctx,{id:'svc1',operatorId:'op1',locationId:'loc1',type:'Delivery',price:500,slaHours:24,coverageAreas:['Москва'],capabilities:['delivery']});const fa=await fulfillment.assign(ctx,{orderId:'o1',type:'Delivery',region:'Москва',requiredCapabilities:['delivery']});assert.equal(fa.operatorId,'op1');
+repo.put(ctx,'Order',{id:'o1',status:'delivered'});const returns=new ReturnService({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T12:00:00Z')});const rr=await returns.create(ctx,{orderId:'o1',reason:'повреждение',type:'damage',evidence:['photo1','photo2']});assert.equal(rr.route,'disagreement');const disputes=new DisagreementService({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T12:00:00Z')});const d=await disputes.open(ctx,{orderId:'o1',issueType:'damage',buyerClaim:'повреждено',evidence:['photo1','photo2']});const da=await disputes.analyze(ctx,d.id);assert.equal(da.status,'resolution_proposed');
+console.log('EINEIRO commerce recovery tests: OK');
