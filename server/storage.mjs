@@ -40,6 +40,7 @@ export class JsonFileStore{
   async appendEvent(event){this.db.events.push(structuredClone(event));await this.flush();}
   listEvents(companyId){return this.db.events.filter(x=>x.companyId===companyId).map(structuredClone);}
   listAllApiKeys(){return Object.values(this.db.records||{}).filter(x=>x&&x.hash&&x.companyId&&x.id).map(structuredClone);}
+  listCompanyIds(){const ids=new Set();for(const u of Object.values(this.db.users||{}))if(u?.companyId)ids.add(u.companyId);for(const r of Object.values(this.db.records||{}))if(r?.companyId)ids.add(r.companyId);return [...ids].sort();}
 }
 
 export class DurableTenantRepository{
