@@ -15,8 +15,9 @@ Status source of truth after repository-history loss. A feature is considered **
 - Each scene slot has exactly one currently selected/placed product at a time.
 - Each scene slot has its **own full relevant catalog of variants**. The catalog is not limited to 3 products and may contain any number of genuinely relevant variants; current contract supports up to 100 per page with pagination/lazy loading and no artificial total cap.
 - Selecting another variant replaces only that slot’s product and preserves that slot’s spatial anchor/relationship.
-- Variants must never be represented as duplicate scene objects. Three shelf variants do not mean three shelves in the scene.
+- Variants must never be represented as duplicate scene objects.
 - The number of scene objects is driven only by the user’s intent/context, not by a UI cap.
+- Cross-slot recommendations may use Product Graph relationships (compatible/complements/same family), but must never merge independent scene slots.
 - Clean View hides UI but keeps all placed scene objects visible.
 - Mobile/tablet/desktop layouts are adaptive, not simple scaled copies.
 
@@ -53,7 +54,8 @@ Status source of truth after repository-history loss. A feature is considered **
 - Independent full variant catalog per scene slot
 - Per-slot pagination through `/api/search/slots`
 - Replace-in-place for a slot while preserving its anchor
-- No artificial cap on total relevant variants per slot; paginated/lazy-loaded catalog contract
+- No artificial cap on total relevant variants per slot
+- Product Graph context can improve the ranking of related objects without changing slot identity
 - Clean View keeps all placed products visible
 - Local development fallback is clearly separate from the real AI path
 
@@ -91,14 +93,27 @@ Status source of truth after repository-history loss. A feature is considered **
 - Runtime data files excluded from Git
 - Automated core/auth/storage tests wired into `npm run check`
 
+### Product Graph / universal category schema
+- Universal hierarchical category schema with category-specific attributes
+- Product validation against category attribute types
+- Product graph nodes for products/variants
+- Typed relations such as `compatible_with`, `complements`, and `same_family`
+- Relation-aware recommendations
+- Relation/context boost in product search
+- Graph-backed catalog source wired into Market runtime
+- Category alias normalization from user-facing labels to universal category IDs
+- Cursor pagination across graph search results
+- Automated graph/category/relation/search/pagination tests wired into `npm run check`
+
 ### Search / recommendation runtime
 - Provider-neutral SearchService
 - Normalized relevance ordering
 - Independent `searchSlots` execution for multiple scene objects
 - One current top offer per slot plus full per-slot catalog
 - Per-slot cursor pagination
-- Reference catalog source for runtime/dev validation
-- Automated independent-slot and pagination tests
+- Graph-backed search source
+- Context-product relationship boost
+- Automated independent-slot, graph and pagination tests
 
 ### Unified Inbox backend
 - Provider-neutral connector registry
@@ -179,8 +194,7 @@ These were part of the agreed product but still need runtime/provider implementa
 - Production acquiring provider credentials/webhook wiring; payment contract/service exists
 - Production transport-company provider credentials/API wiring; logistics contract/service exists
 - Import/migration center for external CRM CSV/XML
-- Product Graph / universal category schema persistence
-- Production search/recommendation index replacing the current reference catalog source
+- Production-scale external search index (OpenSearch/Elasticsearch/vector or equivalent) replacing the in-process Product Graph index when scale requires it
 - Queues/workers beyond inbox delivery dispatch
 - Observability/health metrics
 - Automated per-company/platform backups and disaster recovery
