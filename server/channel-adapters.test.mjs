@@ -5,7 +5,8 @@ import {EineiroMarketAdapter,UnconfiguredExternalAdapter} from './channel-adapte
 
 const ctx={companyId:'c1',userId:'u1',role:'owner'};
 const repo=new MemoryRepository();
-const native=new EineiroMarketAdapter({repoFactory:()=>repo});
+const tenantRepo={put:(entity,record)=>repo.put(ctx,entity,record),list:entity=>repo.list(ctx,entity),get:(entity,id)=>repo.get(ctx,entity,id)};
+const native=new EineiroMarketAdapter({repoFactory:()=>tenantRepo});
 const sent=await native.sendMessage({ctx,message:{conversationId:'conv-1',text:'Здравствуйте'}});
 assert.ok(sent.externalMessageId.startsWith('em_'));
 assert.equal(repo.list(ctx,'MarketMessage').length,1);
