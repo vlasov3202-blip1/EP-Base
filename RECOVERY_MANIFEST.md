@@ -104,6 +104,28 @@ Status source of truth after repository-history loss. A feature is considered **
 - Same resource IDs remain isolated between companies
 - Automated HTTP auth/RBAC/tenant-isolation tests wired into `npm run check`
 
+### Public integration API
+- Tenant-bound API keys for third-party CRMs
+- Raw API tokens are returned only at creation time; stored records contain a SHA-256 hash
+- `X-API-Key` authentication alongside Bearer sessions
+- Per-key scopes such as `products:read`, `products:write`, `orders:read`, `messages:write`
+- Scope enforcement on Platform API resources
+- Per-key request rate limiting with 429 / retry metadata
+- Owner/admin key creation and revocation endpoints
+- API-key requests inherit the key's tenant; clients cannot supply another `companyId`
+- Automated scope/rate-limit/revocation/tenant tests wired into `npm run check`
+
+### Import / migration center
+- CSV parser with quoted-field handling
+- Simple XML `<item>` import contract
+- Configurable field mapping from external CRM schemas
+- Product + inventory normalization into EINEIRO entities
+- Reverse inventory mode: imported stock exists immediately while physical placement remains pending
+- Imported inventory can be assigned to warehouse cells after migration instead of blocking the import
+- Row-level error collection instead of aborting the entire import
+- Tenant-scoped imported records
+- Automated CSV/XML/reverse-inventory tests wired into `npm run check`
+
 ### Product Graph / universal category schema
 - Universal hierarchical category schema with category-specific attributes
 - Product validation against category attribute types
@@ -204,12 +226,11 @@ These were part of the agreed product but still need runtime/provider implementa
 - Real Avito/Drom/Farpost/Auto.ru/VK/Youla/Zzap provider adapters and credentials/webhook wiring; contracts/runtime now exist
 - Production acquiring provider credentials/webhook wiring; payment contract/service exists
 - Production transport-company provider credentials/API wiring; logistics contract/service exists
-- Import/migration center for external CRM CSV/XML
+- OAuth 2.0 authorization flow for third-party integrations; scoped API keys already exist
 - Production-scale external search index (OpenSearch/Elasticsearch/vector or equivalent) replacing the in-process Product Graph index when scale requires it
 - Queues/workers beyond inbox delivery dispatch
 - Observability/health metrics
 - Automated per-company/platform backups and disaster recovery
-- Public API keys/OAuth/scopes/rate limits for third-party CRM access on top of the restored tenant Platform API
 - Mobile-app packaging/publication pipeline
 
 ## Plans
