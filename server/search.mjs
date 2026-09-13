@@ -23,4 +23,11 @@ export class SearchService {
     if(top.length>=2 && top[1].relevance-(top[2]?.relevance??0)>=.14)return top.slice(0,2);
     return top;
   }
+  async searchSlots(ctx,slots=[]){
+    return Promise.all(slots.map(async(slot,index)=>{
+      const catalog=await this.search(ctx,{query:slot.searchQuery||slot.query||'',category:slot.category||null,attributes:slot.attributes||{},limit:slot.limit||this.defaultPageSize,cursor:slot.cursor||null});
+      const current=catalog.items[0]||null;
+      return {slotId:slot.slotId||`slot-${index+1}`,label:slot.label||slot.object||`Объект ${index+1}`,anchor:slot.anchor||null,current,catalog};
+    }));
+  }
 }
