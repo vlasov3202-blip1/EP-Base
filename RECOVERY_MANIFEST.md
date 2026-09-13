@@ -93,6 +93,17 @@ Status source of truth after repository-history loss. A feature is considered **
 - Runtime data files excluded from Git
 - Automated core/auth/storage tests wired into `npm run check`
 
+### HTTP auth / Platform API
+- Bearer-session authentication middleware over the restored session service
+- `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/me`
+- Tenant context is derived from the authenticated session, not accepted from request payloads
+- RBAC checks enforced at endpoint level
+- Versioned `/api/v1/` resources for products, orders, tasks, messages, events and audit
+- Tenant-scoped reads/writes through the durable repository
+- 401 for unauthenticated requests and 403 for insufficient role permissions
+- Same resource IDs remain isolated between companies
+- Automated HTTP auth/RBAC/tenant-isolation tests wired into `npm run check`
+
 ### Product Graph / universal category schema
 - Universal hierarchical category schema with category-specific attributes
 - Product validation against category attribute types
@@ -188,7 +199,7 @@ Status source of truth after repository-history loss. A feature is considered **
 ## Required production restoration still pending
 These were part of the agreed product but still need runtime/provider implementation:
 - Production database adapter (PostgreSQL or equivalent) and deployment migrations; durable provider-neutral adapter exists
-- HTTP/API authentication middleware and cookie/header transport; session service exists
+- Cookie-based browser session transport / CSRF policy; Bearer HTTP auth is restored
 - Pixel-level redaction provider for faces/license plates before external AI calls; metadata minimization hook exists
 - Real Avito/Drom/Farpost/Auto.ru/VK/Youla/Zzap provider adapters and credentials/webhook wiring; contracts/runtime now exist
 - Production acquiring provider credentials/webhook wiring; payment contract/service exists
@@ -198,7 +209,7 @@ These were part of the agreed product but still need runtime/provider implementa
 - Queues/workers beyond inbox delivery dispatch
 - Observability/health metrics
 - Automated per-company/platform backups and disaster recovery
-- Platform API for third-party CRMs
+- Public API keys/OAuth/scopes/rate limits for third-party CRM access on top of the restored tenant Platform API
 - Mobile-app packaging/publication pipeline
 
 ## Plans
