@@ -9,6 +9,11 @@ export async function handlePromotionApi(req,res){
  const url=new URL(req.url,'http://local');if(!url.pathname.startsWith('/api/v1/promotion'))return false;
  try{
   const ctx=await authenticateRequest(req);const {store}=await getPlatformRuntimeForTests();const svc=new ProductPromotionScoreService({repoFactory:c=>store.tenant(c)});const repo=store.tenant(ctx);
+  if(req.method==='GET'&&url.pathname==='/api/v1/promotion/overview'){
+    const products=await repo.list('Product');const rows=[];
+    for(const product of products){const score=await svc.evaluate(ctx,product.id);rows.push({product:{id:product.id,name:product.name||product.title||product.id,category:product.category||product.categoryId||'Товар',price:Number(product.price||0)},score});}
+    rows.sort((a,b)=>b.score.score-a.score.score);return json(res,200,{items:rows,summary:{total:rows.length,promotable:rows.filter(x=>x.score.eligible).length,improve:rows.filter(x=>x.score.recommendation==='improve_then_recheck').length,rejected:rows.filter(x=>x.score.recommendation==='do_not_promote').length}});
+  }
   const score=url.pathname.match(/^\/api\/v1\/promotion\/products\/([^/]+)\/score$/);if(req.method==='GET'&&score)return json(res,200,{score:await svc.evaluate(ctx,decodeURIComponent(score[1]))});
   const metrics=url.pathname.match(/^\/api\/v1\/promotion\/products\/([^/]+)\/metrics$/);if(req.method==='POST'&&metrics){canManage(ctx);return json(res,200,{metrics:await svc.recordMetrics(ctx,decodeURIComponent(metrics[1]),await body(req))});}
   const rec=url.pathname.match(/^\/api\/v1\/promotion\/products\/([^/]+)\/recommend$/);if(req.method==='POST'&&rec){canManage(ctx);const p=await body(req).catch(()=>({}));return json(res,200,{recommendation:await svc.recommendExternalChannels(ctx,decodeURIComponent(rec[1]),{candidateChannels:p.channels||[]})});}
