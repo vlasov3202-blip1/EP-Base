@@ -3,9 +3,9 @@ export function bridgeChannelAdapter(adapter,{connectorId=null,type='messaging',
   const capabilities=new Set(extraCapabilities);
   const handlers={};
   const add=(cap,fn)=>{if(typeof fn==='function'){capabilities.add(cap);handlers[cap]=fn;}};
-  add('receive_messages',adapter.poll?.bind(adapter)?async({input})=>adapter.poll(input||{}):null);
-  add('send_message',adapter.sendMessage?.bind(adapter)?async({input})=>adapter.sendMessage(input||{}):null);
-  add('publish',adapter.publish?.bind(adapter)?async({input,ctx})=>adapter.publish({ctx,item:input.item||input}):null);
+  add('receive_messages',adapter.poll?.bind(adapter)?async({ctx,input})=>adapter.poll({ctx,...(input||{})}):null);
+  add('send_message',adapter.sendMessage?.bind(adapter)?async({ctx,input,idempotencyKey})=>adapter.sendMessage({ctx,...(input||{}),idempotencyKey}):null);
+  add('publish',adapter.publish?.bind(adapter)?async({input,ctx,idempotencyKey})=>adapter.publish({ctx,item:input.item||input,idempotencyKey}):null);
   add('webhooks',adapter.normalizeWebhook?.bind(adapter)?async({input})=>adapter.normalizeWebhook(input):null);
   return{connectorId:connectorId||adapter.name,type,capabilities:[...capabilities],handlers,healthCheck:typeof adapter.checkConnection==='function'?()=>adapter.checkConnection():null,rawAdapter:adapter};
 }
