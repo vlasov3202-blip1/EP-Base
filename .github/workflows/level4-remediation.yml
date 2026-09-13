@@ -22,5 +22,7 @@ jobs:
           node-version: '22'
       - name: Install
         run: npm install --ignore-scripts
+      - name: Syntax check all server modules
+        run: find server -type f -name '*.mjs' -print0 | xargs -0 -n1 node --check
       - name: Full Level 4 check
         run: npm run check
