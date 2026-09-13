@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="surfaces.css" />
     <link rel="stylesheet" href="market-catalog.css" />
     <link rel="stylesheet" href="scene-slots.css" />
+    <link rel="stylesheet" href="recovery-ui.css" />
   </head>
   <body>
     <div id="app"></div>
@@ -23,8 +24,12 @@
       if (surface === 'business') {
         await import('./app.js');
         await import('./business-addons.js');
+        await import('./business-recovery.js');
+      } else if (surface === 'market') {
+        await import('./market.js');
+        await import('./market-spatial-addon.js');
       } else {
-        await import(surface === 'market' ? './market.js' : './admin.js');
+        await import('./admin.js');
       }
     </script>
   </body>
