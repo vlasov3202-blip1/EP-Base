@@ -1,0 +1,83 @@
+name: EINEIRO 183 recovery smoke
+
+on:
+  push:
+    branches:
+      - restore/eineiro-183
+  workflow_dispatch:
+
+jobs:
+  recovery-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Syntax sweep
+        run: |
+          set -euo pipefail
+          while IFS= read -r file; do
+            node --check "$file"
+          done < <(find . -type f \( -name '*.js' -o -name '*.mjs' \) -not -path './dist/*' -not -path './node_modules/*' | sort)
+
+      - name: Recovery-critical tests
+        run: |
+          node server/vision-ai.test.mjs
+          node server/core.test.mjs
+          node server/control-plane.test.mjs
+          node server/control-plane-health.test.mjs
+          node server/search.test.mjs
+          node server/product-graph.test.mjs
+          node spatial-capabilities.test.mjs
+
+      - name: Build complete recovery runtime
+        run: npm run build
+
+      - name: Verify direct frontend dependency graph
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { existsSync } from 'node:fs';
+          const html=await readFile('index.html','utf8');
+          const refs=[];
+          for(const match of html.matchAll(/(?:href|src)=["']([^"']+)|import\(["']\.\/([^"']+)/g)){
+            const ref=(match[1]||match[2]||'').replace(/^\.\//,'');
+            if(ref&&!ref.startsWith('http'))refs.push(ref);
+          }
+          const missing=refs.filter(ref=>!existsSync(`dist/${ref}`));
+          console.log({refs:refs.length,missing});
+          if(missing.length)process.exit(1);
+          NODE
+
+      - name: Start built runtime and smoke Market Business Admin
+        run: |
+          set -euo pipefail
+          cd dist
+          EP_BASE_PORT=4183 node scripts/serve.mjs > /tmp/eineiro-183.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:4183/ >/tmp/market.html; then break; fi
+            sleep 1
+          done
+          curl -fsS 'http://127.0.0.1:4183/?surface=market' >/tmp/market.html
+          curl -fsS 'http://127.0.0.1:4183/?surface=business' >/tmp/business.html
+          curl -fsS 'http://127.0.0.1:4183/?surface=admin' >/tmp/admin.html
+          curl -fsS http://127.0.0.1:4183/market.js >/dev/null
+          curl -fsS http://127.0.0.1:4183/eineiro-business.js >/dev/null
+          curl -fsS http://127.0.0.1:4183/admin.js >/dev/null
+          code=$(curl -sS -o /tmp/control-plane.json -w '%{http_code}' http://127.0.0.1:4183/api/v1/control-plane)
+          test "$code" = "401"
+          cat /tmp/eineiro-183.log
+
+      - name: Package recovery candidate
+        run: |
+          tar -czf /tmp/eineiro-183-recovery.tar.gz dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eineiro-183-recovery
+          path: /tmp/eineiro-183-recovery.tar.gz
+          retention-days: 7
