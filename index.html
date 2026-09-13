@@ -4,14 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#07090a" />
-    <meta name="description" content="EINEIRO Business — adaptive commerce command center" />
-    <title>EINEIRO Business</title>
+    <meta name="description" content="EINEIRO — Market, Business and Admin" />
+    <title>EINEIRO</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="eineiro-skin.css" />
     <link rel="stylesheet" href="eineiro-core.css" />
+    <link rel="stylesheet" href="surfaces.css" />
   </head>
   <body>
     <div id="app"></div>
-    <script type="module" src="app.js"></script>
+    <script type="module">
+      const host = location.hostname.toLowerCase();
+      const preview = new URLSearchParams(location.search).get('surface');
+      const surface = preview || (host.startsWith('admin.') ? 'admin' : host.startsWith('business.') || host.startsWith('cabinet.') ? 'business' : 'market');
+      document.title = surface === 'market' ? 'EINEIRO Market' : surface === 'admin' ? 'EINEIRO Admin' : 'EINEIRO Business';
+      import(surface === 'market' ? './market.js' : surface === 'admin' ? './admin.js' : './app.js');
+    </script>
   </body>
 </html>
