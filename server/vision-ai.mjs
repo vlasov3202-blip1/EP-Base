@@ -3,95 +3,23 @@ import crypto from 'node:crypto';
 const OBJECT_SCHEMA={
   type:'object',additionalProperties:false,
   properties:{
-    slotId:{type:'string'},
-    label:{type:'string'},
-    category:{type:'string'},
-    searchQuery:{type:'string'},
+    slotId:{type:'string'},label:{type:'string'},category:{type:'string'},searchQuery:{type:'string'},
     attributes:{type:'object',additionalProperties:{type:['string','number','boolean','null']}},
-    confidence:{type:'number',minimum:0,maximum:1},
-    anchorHint:{type:['string','null']}
-  },
-  required:['slotId','label','category','searchQuery','attributes','confidence','anchorHint']
+    confidence:{type:'number',minimum:0,maximum:1},anchorHint:{type:['string','null']}
+  },required:['slotId','label','category','searchQuery','attributes','confidence','anchorHint']
 };
+const DEFAULT_SCHEMA={type:'object',additionalProperties:false,properties:{intent:{type:'string'},problem:{type:['string','null']},requestedObjects:{type:'array',items:OBJECT_SCHEMA},confidence:{type:'number',minimum:0,maximum:1},needsClarification:{type:'boolean'},clarificationQuestion:{type:['string','null']}},required:['intent','problem','requestedObjects','confidence','needsClarification','clarificationQuestion']};
 
-const DEFAULT_SCHEMA={
-  type:'object',additionalProperties:false,
-  properties:{
-    intent:{type:'string'},
-    problem:{type:['string','null']},
-    requestedObjects:{type:'array',items:OBJECT_SCHEMA},
-    confidence:{type:'number',minimum:0,maximum:1},
-    needsClarification:{type:'boolean'},
-    clarificationQuestion:{type:['string','null']}
-  },
-  required:['intent','problem','requestedObjects','confidence','needsClarification','clarificationQuestion']
-};
+export function sampleFrames(frames,{maxFrames=4,minGapMs=500}={}){const sorted=[...frames].filter(f=>f?.dataUrl&&Number.isFinite(f.atMs)).sort((a,b)=>a.atMs-b.atMs);const picked=[];for(const frame of sorted){if(picked.length>=maxFrames)break;if(!picked.length||frame.atMs-picked[picked.length-1].atMs>=minGapMs)picked.push(frame)}if(sorted.length&&picked.length<maxFrames){const last=sorted.at(-1);if(!picked.some(x=>x.atMs===last.atMs))picked.push(last)}return picked.slice(0,maxFrames)}
+export function minimizeVisionPayload({frames=[],voiceText='',locale='ru-RU'}={}){return{requestId:crypto.randomUUID(),frames:sampleFrames(frames).map(({dataUrl,atMs})=>({dataUrl,atMs})),voiceText:String(voiceText||'').slice(0,2000),locale,metadata:{device:null,userId:null,geo:null,filename:null,exif:false}}}
+export class VisionAnonymizer{async anonymize(payload){return minimizeVisionPayload(payload)}}
 
-export function sampleFrames(frames,{maxFrames=4,minGapMs=500}={}){
-  const sorted=[...frames].filter(f=>f?.dataUrl&&Number.isFinite(f.atMs)).sort((a,b)=>a.atMs-b.atMs);
-  const picked=[];
-  for(const frame of sorted){
-    if(picked.length>=maxFrames)break;
-    if(!picked.length||frame.atMs-picked[picked.length-1].atMs>=minGapMs)picked.push(frame);
-  }
-  if(sorted.length&&picked.length<maxFrames){
-    const last=sorted.at(-1);
-    if(!picked.some(x=>x.atMs===last.atMs))picked.push(last);
-  }
-  return picked.slice(0,maxFrames);
+export class OpenAIResponsesGateway{
+  constructor({apiKey=process.env.OPENAI_API_KEY,model=process.env.OPENAI_MODEL,fetchImpl=globalThis.fetch,baseUrl='https://api.openai.com/v1'}={}){if(!apiKey)throw new Error('OPENAI_API_KEY required');if(!model)throw new Error('OPENAI_MODEL required');this.apiKey=apiKey;this.model=model;this.fetch=fetchImpl;this.baseUrl=baseUrl.replace(/\/$/,'')}
+  async understand({frames,voiceText,locale='ru-RU'}){const content=[{type:'input_text',text:`Locale: ${locale}\nVoice/context: ${voiceText||'(none)'}\nDecompose the request into the concrete product objects that should exist in the scene. Example: "полка, на которой стоит ваза и книга" means three slots: one shelf, one vase, one book. Each slot represents one object in the scene and must have its own search query and attributes. Do not return multiple variants as multiple scene objects.`}];for(const frame of frames||[])content.push({type:'input_image',image_url:frame.dataUrl,detail:'low'});const body={model:this.model,store:false,instructions:'You are EINEIRO Vision Search. Infer the user goal and decompose it into requested product objects / scene slots. One requested object equals one scene slot. Variants of that object belong to its catalog and must NOT become duplicate scene slots. Do not identify people. Ignore faces, names, addresses, license plates and personal identifiers. If the request is ambiguous, ask one concise clarification.',input:[{role:'user',content}],text:{format:{type:'json_schema',name:'eineiro_scene_intent',strict:true,schema:DEFAULT_SCHEMA}}};const res=await this.fetch(`${this.baseUrl}/responses`,{method:'POST',headers:{Authorization:`Bearer ${this.apiKey}`,'Content-Type':'application/json'},body:JSON.stringify(body)});const json=await res.json().catch(()=>({}));if(!res.ok)throw Object.assign(new Error(json?.error?.message||`OpenAI error ${res.status}`),{status:res.status,body:json});const text=json.output_text||json.output?.flatMap(x=>x.content||[]).find(x=>x.type==='output_text')?.text;if(!text)throw new Error('OpenAI response did not contain structured output');return{...JSON.parse(text),provider:'openai',model:this.model,responseId:json.id,usage:json.usage||null}}
 }
-
-export function minimizeVisionPayload({frames=[],voiceText='',locale='ru-RU'}={}){
-  return {requestId:crypto.randomUUID(),frames:sampleFrames(frames).map(({dataUrl,atMs})=>({dataUrl,atMs})),voiceText:String(voiceText||'').slice(0,2000),locale,metadata:{device:null,userId:null,geo:null,filename:null,exif:false}};
-}
-
-export class VisionAnonymizer { async anonymize(payload){return minimizeVisionPayload(payload);} }
-
-export class OpenAIResponsesGateway {
-  constructor({apiKey=process.env.OPENAI_API_KEY,model=process.env.OPENAI_MODEL,fetchImpl=globalThis.fetch,baseUrl='https://api.openai.com/v1'}={}){
-    if(!apiKey)throw new Error('OPENAI_API_KEY required');
-    if(!model)throw new Error('OPENAI_MODEL required');
-    this.apiKey=apiKey;this.model=model;this.fetch=fetchImpl;this.baseUrl=baseUrl.replace(/\/$/,'');
-  }
-  async understand({frames,voiceText,locale='ru-RU'}){
-    const content=[{type:'input_text',text:`Locale: ${locale}\nVoice/context: ${voiceText||'(none)'}\nDecompose the request into the concrete product objects that should exist in the scene. Example: "полка, на которой стоит ваза и книга" means three slots: one shelf, one vase, one book. Each slot represents one object in the scene and must have its own search query and attributes. Do not return multiple variants as multiple scene objects.`}];
-    for(const frame of frames||[])content.push({type:'input_image',image_url:frame.dataUrl,detail:'low'});
-    const body={model:this.model,store:false,instructions:'You are EINEIRO Vision Search. Infer the user goal and decompose it into requested product objects / scene slots. One requested object equals one scene slot. Variants of that object belong to its catalog and must NOT become duplicate scene slots. Do not identify people. Ignore faces, names, addresses, license plates and personal identifiers. If the request is ambiguous, ask one concise clarification.',input:[{role:'user',content}],text:{format:{type:'json_schema',name:'eineiro_scene_intent',strict:true,schema:DEFAULT_SCHEMA}}};
-    const res=await this.fetch(`${this.baseUrl}/responses`,{method:'POST',headers:{Authorization:`Bearer ${this.apiKey}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const json=await res.json().catch(()=>({}));
-    if(!res.ok)throw Object.assign(new Error(json?.error?.message||`OpenAI error ${res.status}`),{status:res.status,body:json});
-    const text=json.output_text||json.output?.flatMap(x=>x.content||[]).find(x=>x.type==='output_text')?.text;
-    if(!text)throw new Error('OpenAI response did not contain structured output');
-    return {...JSON.parse(text),provider:'openai',model:this.model,responseId:json.id,usage:json.usage||null};
-  }
-}
-
-function normalizeCatalog(raw){return Array.isArray(raw)?{items:raw,total:raw.length,nextCursor:null}:{items:raw?.items||[],total:raw?.total??(raw?.items||[]).length,nextCursor:raw?.nextCursor??null};}
-
-export class VisionSearchService {
-  constructor({anonymizer=new VisionAnonymizer(),provider,search,events=null,audit=null,catalogPageSize=24,maxCatalogPageSize=100}={}){
-    if(!provider)throw new Error('vision provider required');
-    if(typeof search!=='function')throw new Error('search function required');
-    this.anonymizer=anonymizer;this.provider=provider;this.search=search;this.events=events;this.audit=audit;this.catalogPageSize=catalogPageSize;this.maxCatalogPageSize=maxCatalogPageSize;
-  }
-  async resolve(ctx,input={}){
-    const safe=await this.anonymizer.anonymize(input);
-    const intent=await this.provider.understand(safe);
-    const objects=Array.isArray(intent.requestedObjects)?intent.requestedObjects:[];
-    const lowObject=objects.find(x=>Number(x.confidence)<0.72);
-    const mode=intent.confidence<0.72||intent.needsClarification||!objects.length||lowObject?'clarify':'search';
-    const sceneSlots=[];
-    if(mode==='search'){
-      const limit=Math.max(1,Math.min(Number(input.catalogLimit)||this.catalogPageSize,this.maxCatalogPageSize));
-      for(const object of objects){
-        const raw=await this.search(ctx,{slotId:object.slotId,query:object.searchQuery,category:object.category,attributes:object.attributes,limit,cursor:input.cursors?.[object.slotId]??null});
-        const catalog=normalizeCatalog(raw);
-        const currentOffer=catalog.items[0]||null;
-        sceneSlots.push({slotId:object.slotId,label:object.label,category:object.category,anchorHint:object.anchorHint,currentOffer,catalog});
-      }
-    }
-    this.events?.emit?.(ctx,'vision.intent',{requestId:safe.requestId,mode,confidence:intent.confidence,slotCount:sceneSlots.length,totalVariants:sceneSlots.reduce((s,x)=>s+x.catalog.total,0)});
-    this.audit?.write?.(ctx,{action:'vision.resolve',entity:'VisionRequest',entityId:safe.requestId,meta:{mode,confidence:intent.confidence,slotCount:sceneSlots.length,totalVariants:sceneSlots.reduce((s,x)=>s+x.catalog.total,0)}});
-    return {requestId:safe.requestId,mode,intent,sceneSlots};
-  }
+function normalizeCatalog(raw){return Array.isArray(raw)?{items:raw,total:raw.length,nextCursor:null}:{items:raw?.items||[],total:raw?.total??(raw?.items||[]).length,nextCursor:raw?.nextCursor??null}}
+export class VisionSearchService{
+  constructor({anonymizer=new VisionAnonymizer(),provider,search,events=null,audit=null,catalogPageSize=24,maxCatalogPageSize=100}={}){if(!provider)throw new Error('vision provider required');if(typeof search!=='function')throw new Error('search function required');this.anonymizer=anonymizer;this.provider=provider;this.search=search;this.events=events;this.audit=audit;this.catalogPageSize=catalogPageSize;this.maxCatalogPageSize=maxCatalogPageSize}
+  async resolve(ctx,input={}){const safe=await this.anonymizer.anonymize(input);const intent=await this.provider.understand(safe);const objects=Array.isArray(intent.requestedObjects)?intent.requestedObjects:[];const lowObject=objects.find(x=>Number(x.confidence)<0.72);const mode=intent.confidence<0.72||intent.needsClarification||!objects.length||lowObject?'clarify':'search';const sceneSlots=[];if(mode==='search'){const limit=Math.max(1,Math.min(Number(input.catalogLimit)||this.catalogPageSize,this.maxCatalogPageSize));for(const object of objects){const raw=await this.search(ctx,{slotId:object.slotId,query:object.searchQuery,category:object.category,attributes:object.attributes,limit,cursor:input.cursors?.[object.slotId]??null});const catalog=normalizeCatalog(raw);sceneSlots.push({slotId:object.slotId,label:object.label,category:object.category,searchQuery:object.searchQuery,attributes:object.attributes,anchorHint:object.anchorHint,currentOffer:catalog.items[0]||null,catalog})}}this.events?.emit?.(ctx,'vision.intent',{requestId:safe.requestId,mode,confidence:intent.confidence,slotCount:sceneSlots.length,totalVariants:sceneSlots.reduce((s,x)=>s+x.catalog.total,0)});this.audit?.write?.(ctx,{action:'vision.resolve',entity:'VisionRequest',entityId:safe.requestId,meta:{mode,confidence:intent.confidence,slotCount:sceneSlots.length,totalVariants:sceneSlots.reduce((s,x)=>s+x.catalog.total,0)}});return{requestId:safe.requestId,mode,intent,sceneSlots}}
 }
