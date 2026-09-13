@@ -1,9 +1,9 @@
-import {JsonFileStore} from './storage.mjs';
 import {AuthService} from './auth.mjs';
 import {assertCan} from './core.mjs';
 import {ApiKeyService} from './api-keys.mjs';
 import {ImportService} from './importer.mjs';
 import {createInfrastructure} from './infra.mjs';
+import {createDataStore} from './database.mjs';
 import path from 'node:path';
 
 const DATA_FILE=process.env.EINEIRO_DATA_FILE||path.join(process.cwd(),'data','eineiro.json');
@@ -11,15 +11,21 @@ const BACKUP_DIR=process.env.EINEIRO_BACKUP_DIR||path.join(process.cwd(),'backup
 let runtimePromise;
 async function runtime(){
   if(!runtimePromise)runtimePromise=(async()=>{
-    const store=await new JsonFileStore(DATA_FILE).init();
+    const store=await createDataStore();
     const auth=new AuthService(store);
     const apiKeys=new ApiKeyService(store);
     const importer=new ImportService({repoFactory:ctx=>store.tenant(ctx)});
-    const infra=createInfrastructure({dataFile:DATA_FILE,backupDir:BACKUP_DIR});
-    infra.health.register('storage',async()=>({status:store.db?'ok':'down',schemaVersion:store.db?.meta?.schemaVersion||null}));
-    infra.queue.register('backup.platform',async()=>infra.backups.create({scope:'platform'}));
-    infra.queue.register('backup.company',async job=>infra.backups.create({scope:'company',companyId:job.payload.companyId}));
-    return{store,auth,apiKeys,importer,infra};
+    const usesPostgres=Boolean(process.env.DATABASE_URL);
+    const infra=createInfrastructure({dataFile:usesPostgres?null:DATA_FILE,backupDir:BACKUP_DIR});
+    infra.health.register('storage',async()=>{
+      if(usesPostgres){await store.pool.query('SELECT 1');return{status:'ok',type:'postgresql'};}
+      return{status:store.db?'ok':'down',type:'file',schemaVersion:store.db?.meta?.schemaVersion||null};
+    });
+    if(infra.backups){
+      infra.queue.register('backup.platform',async()=>infra.backups.create({scope:'platform'}));
+      infra.queue.register('backup.company',async job=>infra.backups.create({scope:'company',companyId:job.payload.companyId}));
+    }
+    return{store,auth,apiKeys,importer,infra,usesPostgres};
   })();
   return runtimePromise;
 }
@@ -61,6 +67,9 @@ export async function handlePlatformApi(req,res){
   if(req.method==='POST'&&url.pathname==='/api/v1/platform/queue/run'){
     try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:write'});adminOnly(ctx);const p=await body(req).catch(()=>({}));const items=await rt.infra.queue.work({limit:Math.max(1,Math.min(Number(p.limit)||10,100))});return finish(200,{items,stats:rt.infra.queue.stats()});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'QUEUE_FORBIDDEN'})}
   }
+  if(url.pathname.startsWith('/api/v1/platform/backups')&&rt.usesPostgres){
+    return finish(501,{error:'Для PostgreSQL требуется внешнее резервное копирование на уровне инфраструктуры',code:'POSTGRES_BACKUP_EXTERNAL'});
+  }
   if(req.method==='GET'&&url.pathname==='/api/v1/platform/backups'){
     try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:read'});adminOnly(ctx);return finish(200,{items:await rt.infra.backups.list()});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'BACKUP_FORBIDDEN'})}
   }
@@ -87,9 +96,9 @@ export async function handlePlatformApi(req,res){
     try{
       const writePerm={products:'inventory.write',orders:'orders.pack',tasks:'tasks.write',messages:'inbox.write'}[m[1]];
       const ctx=await authorize(req,{permission:req.method==='GET'?permissionMap[m[1]]:writePerm,scope:scopeFor(m[1],req.method)});
-      if(m[1]==='events')return finish(200,{items:rt.store.listEvents(ctx.companyId)});
-      if(m[1]==='audit')return finish(200,{items:rt.store.listAudit(ctx.companyId)});
-      const repo=rt.store.tenant(ctx);if(req.method==='GET')return finish(200,{items:repo.list(entityMap[m[1]])});
+      if(m[1]==='events')return finish(200,{items:await rt.store.listEvents(ctx.companyId)});
+      if(m[1]==='audit')return finish(200,{items:await rt.store.listAudit(ctx.companyId)});
+      const repo=rt.store.tenant(ctx);if(req.method==='GET')return finish(200,{items:await repo.list(entityMap[m[1]])});
       if(req.method==='POST'){
         if(!writePerm)return finish(405,{error:'method not allowed'});const p=await body(req);if(!p.id)throw Object.assign(new Error('id required'),{status:400});const item=await repo.put(entityMap[m[1]],p);return finish(201,{item});
       }
