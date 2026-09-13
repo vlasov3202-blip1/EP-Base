@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {normalizeCondition} from './condition-engine.mjs';
 
 export class ImportMappingService{
   constructor({repoFactory,now=()=>new Date()}={}){if(typeof repoFactory!=='function')throw new Error('repoFactory required');this.repoFactory=repoFactory;this.now=now;}
@@ -8,7 +9,25 @@ export class ImportMappingService{
 
 export class UniversalImportEngineV2{
   constructor({repoFactory,categorySchema=null,moderation=null,now=()=>new Date()}={}){if(typeof repoFactory!=='function')throw new Error('repoFactory required');this.repoFactory=repoFactory;this.categorySchema=categorySchema;this.moderation=moderation;this.now=now;}
-  async importRows(ctx,{rows=[],mapping={},reverseInventory=false,defaultSellerId=null,source='csv'}={}){const repo=this.repoFactory(ctx);const result={source,total:rows.length,imported:0,errors:[],products:[],offers:[],skus:[],inventory:[]};for(let i=0;i<rows.length;i++){try{const row=rows[i];const p=mapRow(row,mapping);if(!p.name)throw new Error('name required');const product={id:`prd_${crypto.randomUUID()}`,name:p.name,description:p.description||'',categoryId:p.category||'uncategorized',attributes:p.attributes||{},condition:p.condition||'new',images:normalizeImages(p.images),status:'active',createdAt:this.now().toISOString()};if(this.categorySchema){const v=await this.categorySchema.validateProduct(ctx,product);if(!v.valid)throw new Error(`category validation: ${v.errors.join(', ')}`);}if(this.moderation){const m=await this.moderation.checkProduct?.(ctx,product);if(m&&m.allowed===false)throw new Error(`moderation: ${(m.reasons||[]).join(', ')}`);}await repo.put('Product',product);const sku={id:`sku_${crypto.randomUUID()}`,productId:product.id,code:p.sku||null,attributes:structuredClone(p.skuAttributes||{}),status:'active',createdAt:this.now().toISOString()};await repo.put('SKU',sku);const offer={id:`off_${crypto.randomUUID()}`,productId:product.id,skuId:sku.id,sellerId:p.sellerId||defaultSellerId||'import',price:Number(p.price||0),condition:product.condition,stock:Number(p.stock||0),region:p.region||null,status:'active',createdAt:this.now().toISOString()};await repo.put('Offer',offer);const inv={id:`inv_${crypto.randomUUID()}`,productId:product.id,skuId:sku.id,quantity:Number(p.stock||0),location:reverseInventory?null:(p.location||null),placementStatus:reverseInventory?'unassigned':'assigned',createdAt:this.now().toISOString()};await repo.put('InventoryUnit',inv);result.imported++;result.products.push(product.id);result.offers.push(offer.id);result.skus.push(sku.id);result.inventory.push(inv.id);}catch(e){result.errors.push({row:i+1,error:String(e.message||e)})}}return result;}
+  async importRows(ctx,{rows=[],mapping={},reverseInventory=false,defaultSellerId=null,source='csv'}={}){
+    const repo=this.repoFactory(ctx);const result={source,total:rows.length,imported:0,duplicates:0,errors:[],products:[],offers:[],skus:[],inventory:[]};
+    for(let i=0;i<rows.length;i++){
+      try{
+        const row=rows[i];const p=mapRow(row,mapping);if(!p.name)throw new Error('name required');const sellerId=p.sellerId||defaultSellerId||'import';const condition=normalizeCondition(p.condition,{fallback:'USED'});
+        const dedupKey=crypto.createHash('sha256').update(JSON.stringify({source,sellerId,sku:p.sku||null,name:p.name,category:p.category||'uncategorized'})).digest('hex');const existing=(await repo.list('ImportRow')).find(x=>x.dedupKey===dedupKey&&x.status==='imported');if(existing){result.duplicates++;continue;}
+        const product={id:`prd_${crypto.randomUUID()}`,name:p.name,description:p.description||'',categoryId:p.category||'uncategorized',attributes:p.attributes||{},images:normalizeImages(p.images),status:'active',createdAt:this.now().toISOString()};
+        if(this.categorySchema){const v=await this.categorySchema.validateProduct(ctx,product);if(!v.valid)throw new Error(`category validation: ${[...(v.missing||[]),...(v.errors||[])].join(', ')}`);}
+        if(this.moderation){const m=await this.moderation.checkProduct?.(ctx,product);if(m&&m.allowed===false)throw new Error(`moderation: ${(m.issues||m.reasons||[]).map?.(x=>x.code||x)?.join(', ')||'blocked'}`);}
+        await repo.put('Product',product);
+        const sku={id:`sku_${crypto.randomUUID()}`,productId:product.id,code:p.sku||null,condition,attributes:structuredClone(p.skuAttributes||{}),status:'active',createdAt:this.now().toISOString()};await repo.put('SKU',sku);
+        const price=Number(p.price||0);if(!Number.isFinite(price)||price<0)throw new Error('invalid price');const offer={id:`off_${crypto.randomUUID()}`,productId:product.id,skuId:sku.id,sellerId,price,condition,stock:Number(p.stock||0),region:p.region||null,status:'active',createdAt:this.now().toISOString()};await repo.put('Offer',offer);
+        const inv={id:`inv_${crypto.randomUUID()}`,productId:product.id,skuId:sku.id,quantity:Number(p.stock||0),reserved:0,location:reverseInventory?null:(p.location||null),placementStatus:reverseInventory?'unassigned':'assigned',createdAt:this.now().toISOString()};await repo.put('InventoryUnit',inv);
+        await repo.put('ImportRow',{id:`import-row:${dedupKey}`,dedupKey,source,sellerId,productId:product.id,skuId:sku.id,offerId:offer.id,status:'imported',createdAt:this.now().toISOString()});
+        result.imported++;result.products.push(product.id);result.offers.push(offer.id);result.skus.push(sku.id);result.inventory.push(inv.id);
+      }catch(e){result.errors.push({row:i+1,error:String(e.message||e)})}
+    }
+    return result;
+  }
 }
 function mapRow(row,mapping){const get=k=>mapping[k]?row[mapping[k]]:row[k];return{name:get('name'),description:get('description'),price:get('price'),stock:get('stock'),sku:get('sku'),category:get('category'),condition:get('condition'),sellerId:get('sellerId'),region:get('region'),images:get('images'),location:get('location'),attributes:parseMaybeJson(get('attributes')),skuAttributes:parseMaybeJson(get('skuAttributes'))}}
 function parseMaybeJson(v){if(v&&typeof v==='object')return structuredClone(v);if(typeof v!=='string'||!v.trim())return{};try{return JSON.parse(v)}catch{return{}}}
