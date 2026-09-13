@@ -70,12 +70,20 @@ Status source of truth after repository-history loss. A feature is considered **
 - Tenant-scoped event bus
 - Tenant-scoped audit log
 - Owner decision escalation gate by confidence / limits / legal / financial / anomaly reasons
-- Automated core tests wired into `npm run check`
+- Durable JSON storage adapter with atomic writes
+- Schema migrations and schema-version tracking
+- Server-side user records scoped by company
+- Password hashing via PBKDF2-SHA256 with per-user salt
+- Login / authenticate / logout session management
+- Session expiry handling
+- Tenant-scoped durable repository reload verification
+- Runtime data files excluded from Git
+- Automated core/auth/storage tests wired into `npm run check`
 
 ## Required production restoration still pending
 These were part of the agreed product but still need runtime/provider implementation:
-- Persistent server database and migrations (repository contract exists; durable adapter pending)
-- Authentication/session management
+- Production database adapter (PostgreSQL or equivalent) and deployment migrations; durable provider-neutral adapter exists
+- HTTP/API authentication middleware and cookie/header transport; session service exists
 - Real OpenAI multimodal gateway and provider abstraction runtime
 - Vision frame sampling/anonymization pipeline
 - Real Avito/Drom/Farpost/Auto.ru/VK/Youla/Zzap connectors and webhooks/polling
