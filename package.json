@@ -1,12 +1,12 @@
 {
-  "name": "ep-base",
-  "version": "0.1.0",
+  "name": "eineiro-platform",
+  "version": "0.4.0-recovery",
   "private": true,
-  "description": "Easy Parts inventory MVP",
+  "description": "EINEIRO universal commerce platform recovery build",
   "type": "module",
   "scripts": {
     "dev": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
-    "check": "node --check app.js && node scripts/check.mjs"
+    "check": "node --check app.js && node --check market.js && node --check admin.js && node --check business-addons.js && node --check platform-core.js && node server/core.test.mjs && node scripts/check.mjs"
   }
 }
