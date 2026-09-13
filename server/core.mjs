@@ -48,7 +48,7 @@ export class AuditLog {
     const evt={id:crypto.randomUUID(),at:new Date().toISOString(),companyId:ctx.companyId,userId:ctx.userId,role:ctx.role,action,entity,entityId,result,meta:structuredClone(meta)};
     this.#events.push(evt);return structuredClone(evt);
   }
-  list(ctx){return this.#events.filter(e=>e.companyId===ctx.companyId).map(structuredClone);}
+  list(ctx){return this.#events.filter(e=>e.companyId===ctx.companyId).map(e=>structuredClone(e));}
 }
 
 export class EventBus {
@@ -57,7 +57,7 @@ export class EventBus {
     const evt={id:crypto.randomUUID(),type,companyId:ctx.companyId,at:new Date().toISOString(),payload:structuredClone(payload)};
     this.#events.push(evt);return structuredClone(evt);
   }
-  list(ctx){return this.#events.filter(e=>e.companyId===ctx.companyId).map(structuredClone);}
+  list(ctx){return this.#events.filter(e=>e.companyId===ctx.companyId).map(e=>structuredClone(e));}
 }
 
 export const OWNER_DECISION_REASONS=new Set(['limit_exceeded','low_confidence','legal_confirmation','financial_confirmation','serious_anomaly']);
