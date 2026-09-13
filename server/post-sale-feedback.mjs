@@ -1,0 +1,10 @@
+import crypto from 'node:crypto';
+import {SellerReputationService} from './seller-reputation.mjs';
+
+export class PostSaleFeedbackService{
+  constructor({repoFactory,eventLayer=null,now=()=>new Date()}={}){if(typeof repoFactory!=='function')throw new Error('repoFactory required');this.repoFactory=repoFactory;this.eventLayer=eventLayer;this.now=now;}
+  async addReview(ctx,{orderId,sellerId,rating,descriptionAccurate=true,text='',attributes={}}={}){const repo=this.repoFactory(ctx);const order=await repo.get('Order',orderId);if(!order)throw new Error('order not found');const rec={id:`review_${crypto.randomUUID()}`,orderId,sellerId:sellerId||order.sellerId,rating:Math.max(1,Math.min(5,Number(rating)||1)),descriptionAccurate:Boolean(descriptionAccurate),text,attributes:structuredClone(attributes),createdAt:this.now().toISOString()};await repo.put('Review',rec);await this.#refresh(ctx,rec.sellerId);return rec;}
+  async registerReturnOutcome(ctx,{returnId,sellerId,reason,resolution,attributableToSeller=false}={}){const repo=this.repoFactory(ctx);const rec={id:`feedback_return_${crypto.randomUUID()}`,returnId,sellerId,reason,resolution,attributableToSeller:Boolean(attributableToSeller),createdAt:this.now().toISOString()};await repo.put('PostSaleSignal',rec);if(sellerId)await this.#refresh(ctx,sellerId);if(this.eventLayer)await this.eventLayer.emit(ctx,'post_sale.return_feedback',rec);return rec;}
+  async registerDisagreementOutcome(ctx,{disagreementId,sellerId,resolution,fault='unclear',confidence=null}={}){const repo=this.repoFactory(ctx);const rec={id:`feedback_dis_${crypto.randomUUID()}`,disagreementId,sellerId,resolution,fault,confidence,createdAt:this.now().toISOString()};await repo.put('PostSaleSignal',rec);if(sellerId)await this.#refresh(ctx,sellerId);if(this.eventLayer)await this.eventLayer.emit(ctx,'post_sale.disagreement_feedback',rec);return rec;}
+  async #refresh(ctx,sellerId){return new SellerReputationService({repoFactory:this.repoFactory,now:this.now}).evaluate(ctx,sellerId)}
+}
