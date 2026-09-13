@@ -1,11 +1,18 @@
 import {authenticateRequest,getPlatformRuntimeForTests} from './http-api.mjs';
 import {MarketingAutopilotService} from './marketing-autopilot.mjs';
 import {MarketingPublisherRegistry,EineiroMarketMarketingPublisher} from './marketing-publishers.mjs';
+import {CreativeFactory,createRuleBasedCopyGenerator} from './creative-factory.mjs';
 
 function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(payload));}
 async function body(req){const chunks=[];for await(const c of req)chunks.push(c);return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}')}
 function canManage(ctx){if(!['owner','manager','admin'].includes(ctx.role))throw Object.assign(new Error('marketing access required'),{status:403,code:'FORBIDDEN'});}
-async function service(ctx){const {store}=await getPlatformRuntimeForTests();const registry=new MarketingPublisherRegistry().register('eineiro_market',new EineiroMarketMarketingPublisher({repoFactory:c=>store.tenant(c)}));return new MarketingAutopilotService({repoFactory:c=>store.tenant(c),publisherRegistry:registry});}
+async function service(ctx){
+  const {store}=await getPlatformRuntimeForTests();
+  const registry=new MarketingPublisherRegistry().register('eineiro_market',new EineiroMarketMarketingPublisher({repoFactory:c=>store.tenant(c)}));
+  const factory=new CreativeFactory({copyGenerator:createRuleBasedCopyGenerator()});
+  const creativeGenerator=async({campaign,brief,index})=>{const productId=campaign.products?.[0];const product=productId?await store.tenant(ctx).get('Product',productId):null;const made=await factory.create({campaign,product,audience:campaign.audience,angle:brief?.angle||null,format:brief?.format||'image',channel:brief?.channel||campaign.channels?.[0]||'eineiro_market',constraints:{index,...brief}});return{headline:made.headline,text:made.text,visualPrompt:made.visualPrompt,assetUrl:made.assetUrl,format:made.format,renderStatus:made.renderStatus,cta:made.cta};};
+  return new MarketingAutopilotService({repoFactory:c=>store.tenant(c),publisherRegistry:registry,creativeGenerator});
+}
 
 export async function handleMarketingApi(req,res){
  const url=new URL(req.url,'http://local');if(!url.pathname.startsWith('/api/v1/marketing'))return false;
