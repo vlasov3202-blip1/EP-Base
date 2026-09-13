@@ -43,7 +43,8 @@ createServer(async (request, response) => {
       const marketHandled = await handleMarketApi(request, response);
       if (marketHandled !== false) return;
     }
-    const requested = request.url === '/' ? '/index.html' : request.url.split('?')[0];
+    const pathname = request.url?.split('?')[0] || '/';
+    const requested = pathname === '/' ? '/index.html' : pathname;
     const path = normalize(join(process.cwd(), requested));
     if (!path.startsWith(process.cwd())) throw new Error('Invalid path');
     const body = await readFile(path);
