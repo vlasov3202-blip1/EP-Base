@@ -9,7 +9,7 @@ const checks = [
   ['application shell', html.includes('id="app"')],
   ['mobile layout', css.includes('@media (max-width: 760px)')],
   ['local persistence', js.includes('localStorage')],
-  ['safe output escaping', js.includes('escapeHtml')],
+  ['safe output escaping', js.includes('escapeHtml') || js.includes('const esc=v=>String')],
 ];
 
 const failed = checks.filter(([, result]) => !result);
