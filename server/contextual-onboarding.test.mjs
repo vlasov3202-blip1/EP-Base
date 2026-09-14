@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {ContextualOnboardingService} from './contextual-onboarding.mjs';
 
-class Repo{constructor(){this.m=new Map()}async put(t,x){if(!this.m.has(t))this.m.set(t,new Map());this.m.get(t).set(x.id,structuredClone(x));return x}async list(t){return [...(this.m.get(t)?.values()||[])].map(structuredClone)}}
+class Repo{constructor(){this.m=new Map()}async put(t,x){if(!this.m.has(t))this.m.set(t,new Map());this.m.get(t).set(x.id,structuredClone(x));return x}async list(t){return [...(this.m.get(t)?.values()||[])].map(value=>structuredClone(value))}}
 const repo=new Repo();const service=new ContextualOnboardingService({repoFactory:()=>repo});
 const ctx={identityId:'i1',companyId:'c1'};
 
