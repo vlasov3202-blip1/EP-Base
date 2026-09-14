@@ -14,7 +14,8 @@ import {AiCostService} from './ai-costs.mjs';
 import {PrivacyGateway} from './privacy-gateway.mjs';
 import {ModerationAIOrchestrator,ModerationHumanExceptionService} from './moderation-ai.mjs';
 import {OpenAiCompatibleModerationProvider} from './openai-moderation-provider.mjs';
-import {ModerationAppealService,ModerationMonitoringService,ModerationIncidentService} from './moderation-lifecycle.mjs';
+import {ModerationAppealService,ModerationMonitoringService,ModerationIncidentService,ModerationRepublicationService} from './moderation-lifecycle.mjs';
+import {EncryptedFileEvidenceStorage,ModerationEvidenceService} from './moderation-evidence.mjs';
 import path from 'node:path';
 
 const DATA_FILE=process.env.EINEIRO_DATA_FILE||path.join(process.cwd(),'data','eineiro.json');
@@ -66,9 +67,23 @@ async function runtime(){
       events:moderationEvents,
       enabled:envFlag('POST_PUBLICATION_MONITORING_ENABLED',true)
     });
+    const moderationEvidenceKey=process.env.EINEIRO_MODERATION_EVIDENCE_KEY||'';
+    const moderationEvidence=new ModerationEvidenceService({
+      repoFactory,
+      storage:moderationEvidenceKey?new EncryptedFileEvidenceStorage({
+        rootDir:process.env.EINEIRO_MODERATION_EVIDENCE_DIR||path.join(process.cwd(),'data','moderation-evidence'),
+        key:moderationEvidenceKey
+      }):null,
+      audit:moderationAudit,
+      events:moderationEvents,
+      maxBytes:Number(process.env.EINEIRO_MODERATION_EVIDENCE_MAX_BYTES||10000000),
+      retentionDays:Number(process.env.EINEIRO_MODERATION_EVIDENCE_RETENTION_DAYS||365)
+    });
+    const moderationRepublication=new ModerationRepublicationService({repoFactory,moderation,audit:moderationAudit,events:moderationEvents});
     const moderationIncidents=new ModerationIncidentService({
       repoFactory,
       monitoring:moderationMonitoring,
+      republication:moderationRepublication,
       audit:moderationAudit,
       events:moderationEvents
     });
@@ -81,7 +96,7 @@ async function runtime(){
     });
     if(infra.backups)infra.queue.register('backup.platform',async()=>infra.backups.create({scope:'platform'}));
     infra.queue.register('backup.company',async job=>companyBackups.create(job.payload.companyId));
-    return{store,auth,apiKeys,importer,infra,companyBackups,categorySchemas,moderation,moderationAi,moderationHuman,moderationAppeals,moderationMonitoring,moderationIncidents,usesPostgres};
+    return{store,auth,apiKeys,importer,infra,companyBackups,categorySchemas,moderation,moderationAi,moderationHuman,moderationAppeals,moderationMonitoring,moderationEvidence,moderationRepublication,moderationIncidents,usesPostgres};
   })();
   return runtimePromise;
 }
@@ -169,6 +184,34 @@ export async function handlePlatformApi(req,res){
       return finish(moderationCase.reused?200:201,{moderationCase});
     }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_ERROR'})}
   }
+  if(req.method==='POST'&&url.pathname==='/api/v1/moderation/evidence'){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:write'});moderationRoleOnly(ctx);
+      return finish(201,{evidence:await rt.moderationEvidence.upload(ctx,await body(req,{maxBytes:14_000_000}))});
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_EVIDENCE_ERROR'})}
+  }
+  const moderationCaseEvidenceMatch=url.pathname.match(/^\/api\/v1\/moderation\/cases\/([^/]+)\/evidence$/);
+  if(req.method==='GET'&&moderationCaseEvidenceMatch){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:read'});moderationRoleOnly(ctx);
+      return finish(200,{items:await rt.moderationEvidence.listForCase(ctx,moderationCaseEvidenceMatch[1])});
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_EVIDENCE_ERROR'})}
+  }
+  const moderationEvidenceMatch=url.pathname.match(/^\/api\/v1\/moderation\/evidence\/([^/]+)$/);
+  if(req.method==='GET'&&moderationEvidenceMatch){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:read'});moderationRoleOnly(ctx);
+      const evidence=await rt.moderationEvidence.get(ctx,moderationEvidenceMatch[1],{includeContent:url.searchParams.get('content')==='1'});
+      return evidence?finish(200,{evidence}):finish(404,{error:'evidence not found',code:'MODERATION_EVIDENCE_NOT_FOUND'});
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_EVIDENCE_ERROR'})}
+  }
+  const moderationRepublicationMatch=url.pathname.match(/^\/api\/v1\/moderation\/cases\/([^/]+)\/republication$/);
+  if(req.method==='POST'&&moderationRepublicationMatch){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:write'});moderationRoleOnly(ctx);
+      return finish(201,await rt.moderationRepublication.request(ctx,moderationRepublicationMatch[1],await body(req,{maxBytes:100_000})));
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_REPUBLICATION_ERROR'})}
+  }
   const moderationAppealSubmitMatch=url.pathname.match(/^\/api\/v1\/moderation\/cases\/([^/]+)\/appeals$/);
   if(req.method==='POST'&&moderationAppealSubmitMatch){
     try{
@@ -199,6 +242,13 @@ export async function handlePlatformApi(req,res){
       const ctx=await authorize(req,{scope:'moderation:write'});moderationAiRoleOnly(ctx);
       return finish(201,await rt.moderationMonitoring.recordSignal(ctx,await body(req,{maxBytes:200_000})));
     }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_SIGNAL_ERROR'})}
+  }
+  const moderationIncidentResolveMatch=url.pathname.match(/^\/api\/v1\/moderation\/incidents\/([^/]+)\/resolve$/);
+  if(req.method==='POST'&&moderationIncidentResolveMatch){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:write'});adminOnly(ctx);
+      return finish(200,{incident:await rt.moderationIncidents.resolve(ctx,moderationIncidentResolveMatch[1],await body(req,{maxBytes:100_000}))});
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_INCIDENT_ERROR'})}
   }
   if(req.method==='GET'&&url.pathname==='/api/v1/moderation/incidents'){
     try{

@@ -28,6 +28,10 @@ SECOND_AI_REVIEW_ENABLED=true
 HUMAN_EXCEPTION_QUEUE_ENABLED=true
 MODERATION_APPEALS_ENABLED=true
 POST_PUBLICATION_MONITORING_ENABLED=true
+EINEIRO_MODERATION_EVIDENCE_KEY=generate-a-separate-32-byte-secret
+EINEIRO_MODERATION_EVIDENCE_DIR=./data/moderation-evidence
+EINEIRO_MODERATION_EVIDENCE_MAX_BYTES=10000000
+EINEIRO_MODERATION_EVIDENCE_RETENTION_DAYS=365
 MODERATION_KILL_SWITCH=false
 ```
 
@@ -54,6 +58,9 @@ npm run dev
 6. Апелляция с новой уликой: `POST /api/v1/moderation/cases/{caseId}/appeals`.
 7. Сигнал постконтроля: `POST /api/v1/moderation/post-publication-signals`.
 8. Массовый инцидент с ограниченным selector: `POST /api/v1/moderation/incidents`.
+9. Зашифрованная улика: `POST /api/v1/moderation/evidence`.
+10. Повторная проверка карантина: `POST /api/v1/moderation/cases/{caseId}/republication`.
+11. Закрытие инцидента с перепроверкой: `POST /api/v1/moderation/incidents/{id}/resolve`.
 
 Для API-ключей нужны scopes `moderation:read` и `moderation:write`. Ручное решение разрешено только ролям `owner` и `admin`.
 
@@ -83,3 +90,25 @@ MODERATION_KILL_SWITCH=true
 - проверен сценарий с отключённым провайдером;
 - назначены владельцы очереди P0/P1;
 - журналы `ModerationAiReview`, `ModerationHumanException`, `AiCost` и `UnifiedAudit` доступны для расследования.
+
+
+## Защищённые доказательства
+
+Для файлов апелляции нужен отдельный ключ шифрования, не OpenAI-ключ:
+
+```bash
+openssl rand -base64 32
+```
+
+Результат сохраняется только как серверный секрет `EINEIRO_MODERATION_EVIDENCE_KEY`. Без него API загрузки возвращает `EVIDENCE_STORAGE_DISABLED`, а остальная модерация продолжает работать.
+
+Файлы:
+
+- не попадают в публичную директорию и товарные медиа;
+- шифруются AES-256-GCM с tenant-bound AAD;
+- проверяются по MIME-сигнатуре и SHA-256;
+- ограничены 10 МБ по умолчанию;
+- доступны только участникам того же moderation case;
+- удаляются фоновым процессом после срока хранения.
+
+Повторная публикация никогда не меняет статус Offer напрямую: создаётся новое дело и заново выполняются алгоритмические правила.

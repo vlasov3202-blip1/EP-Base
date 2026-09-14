@@ -158,5 +158,23 @@ out=await call('POST','/api/v1/moderation/incidents',{
 assert.equal(out.status,201);
 assert.equal(out.body.incident.quarantinedCount,1);
 assert.equal((await repo.get('Offer','offer-incident')).moderationStatus,'QUARANTINED');
+const incidentId=out.body.incident.id;
+out=await call('POST','/api/v1/moderation/incidents/'+incidentId+'/resolve',{
+  action:'recheck',
+  reason:'Поставщик подтвердил безопасность тестовой партии; выполнить повторную проверку.'
+},ownerLogin.token);
+assert.equal(out.status,200);
+assert.equal(out.body.incident.resolution.outcomes.published,1);
+assert.equal((await repo.get('Offer','offer-incident')).moderationStatus,'AUTO_APPROVED');
+
+out=await call('POST','/api/v1/moderation/evidence',{
+  moderationCaseId:rejectedCaseId,
+  fileName:'origin.pdf',
+  mimeType:'application/pdf',
+  kind:'document',
+  contentBase64:Buffer.from('%PDF-1.4\\n%%EOF').toString('base64')
+},sellerLogin.token);
+assert.equal(out.status,503);
+assert.equal(out.body.code,'EVIDENCE_STORAGE_DISABLED');
 
 console.log('EINEIRO moderation API tests: OK');

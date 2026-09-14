@@ -37,6 +37,11 @@ export class ModerationAppealService{
     const statement=String(sellerStatement||'').trim();
     const refs=[...new Set((evidenceRefs||[]).map(String).filter(Boolean))];
     if(statement.length<20||!refs.length)throw codedError('new evidence and seller statement required','APPEAL_NEW_EVIDENCE_REQUIRED',400);
+    for(const ref of refs.filter(value=>value.startsWith('evidence:'))){
+      const evidence=await repo.get('ModerationEvidence',ref.slice('evidence:'.length));
+      if(!evidence||evidence.status!=='active'||evidence.moderationCaseId!==moderationCase.id)throw codedError('appeal evidence is unavailable or belongs to another case','APPEAL_EVIDENCE_INVALID',400);
+      assertObjectAccess(ctx,evidence);
+    }
     const existing=(await repo.list('ModerationAppeal')).find(row=>row.moderationCaseId===moderationCase.id&&['submitted','ai_review','human_review'].includes(row.status));
     if(existing)return{appeal:existing,moderationCase,reused:true};
     const hardRules=(await repo.list('ModerationRuleResult')).filter(row=>
@@ -230,11 +235,62 @@ export class ModerationMonitoringService{
   }
 }
 
+export class ModerationRepublicationService{
+  constructor({repoFactory,moderation,audit=null,events=null,now=()=>new Date()}={}){
+    if(typeof repoFactory!=='function')throw new Error('repoFactory required');
+    if(!moderation?.review)throw new Error('moderation service required');
+    this.repoFactory=repoFactory;this.moderation=moderation;this.audit=audit;this.events=events;this.now=now;
+  }
+  async request(ctx,moderationCaseId,{reason=''}={}){
+    const statement=String(reason||'').trim();
+    if(statement.length<20)throw codedError('republication reason required','REPUBLICATION_REASON_REQUIRED',400);
+    const repo=this.repoFactory(ctx);
+    const sourceCase=await repo.get('ModerationCase',moderationCaseId);
+    if(!sourceCase)throw codedError('moderation case not found','MODERATION_CASE_NOT_FOUND',404);
+    assertObjectAccess(ctx,sourceCase);
+    if(sourceCase.decision!==MODERATION_DECISIONS.QUARANTINED)throw codedError('only quarantined offer can be rechecked','REPUBLICATION_NOT_ALLOWED',409);
+    if(!sourceCase.offerId)throw codedError('offer required for republication','OFFER_ID_REQUIRED',400);
+    const idempotencyKey='republication:'+sourceCase.id+':'+fingerprint({statement});
+    const existing=(await repo.list('ModerationRepublication')).find(row=>row.idempotencyKey===idempotencyKey);
+    if(existing)return{request:existing,moderationCase:await repo.get('ModerationCase',existing.resultCaseId),reused:true};
+    const currentOffer=await repo.get('Offer',sourceCase.offerId);
+    if(!currentOffer||currentOffer.moderationCaseId!==sourceCase.id)throw codedError('moderation state changed; refresh required','REPUBLICATION_STATE_CHANGED',409);
+    const at=this.now().toISOString();
+    let request={
+      id:'modrep_'+crypto.randomUUID(),
+      sourceCaseId:sourceCase.id,
+      offerId:sourceCase.offerId,
+      productId:sourceCase.productId,
+      sellerId:sourceCase.sellerId,
+      reason:statement,
+      status:'running',
+      idempotencyKey,
+      createdBy:{id:ctx.userId,role:ctx.role},
+      createdAt:at
+    };
+    await repo.put('ModerationRepublication',request);
+    const resultCase=await this.moderation.review(ctx,{offerId:sourceCase.offerId,force:true,trigger:'republication',source:'republication'});
+    request={...request,status:'completed',resultCaseId:resultCase.id,resultDecision:resultCase.decision,completedAt:this.now().toISOString()};
+    await repo.put('ModerationRepublication',request);
+    await this.events?.emit?.(ctx,'moderation.republication.completed',{requestId:request.id,sourceCaseId:sourceCase.id,resultCaseId:resultCase.id,decision:resultCase.decision});
+    await this.audit?.write?.(ctx,{
+      actor:{type:'user',id:ctx.userId,role:ctx.role},
+      action:'moderation.republication.request',
+      object:{type:'Offer',id:sourceCase.offerId,sourceCaseId:sourceCase.id,resultCaseId:resultCase.id},
+      reason:statement,
+      decision:resultCase.decision,
+      before:{moderationStatus:sourceCase.decision},
+      after:{moderationStatus:resultCase.decision}
+    });
+    return{request,moderationCase:resultCase,reused:false};
+  }
+}
+
 export class ModerationIncidentService{
-  constructor({repoFactory,monitoring,audit=null,events=null,now=()=>new Date()}={}){
+  constructor({repoFactory,monitoring,republication=null,audit=null,events=null,now=()=>new Date()}={}){
     if(typeof repoFactory!=='function')throw new Error('repoFactory required');
     if(!monitoring?.recordSignal)throw new Error('monitoring service required');
-    this.repoFactory=repoFactory;this.monitoring=monitoring;this.audit=audit;this.events=events;this.now=now;
+    this.repoFactory=repoFactory;this.monitoring=monitoring;this.republication=republication;this.audit=audit;this.events=events;this.now=now;
   }
   async open(ctx,{title,reason,selector={},evidenceRefs=[],severity='critical'}={}){
     if(!['owner','admin'].includes(ctx.role))throw codedError('owner/admin required','FORBIDDEN',403);
@@ -266,8 +322,9 @@ export class ModerationIncidentService{
       createdAt:at
     };
     await repo.put('ModerationIncident',incident);
-    let quarantined=0;
+    let quarantined=0;const effects=[];
     for(const offer of targets){
+      const before={moderationStatus:offer.moderationStatus,moderationCaseId:offer.moderationCaseId||null};
       const out=await this.monitoring.recordSignal(ctx,{
         offerId:offer.id,
         type:'mass_incident',
@@ -277,9 +334,9 @@ export class ModerationIncidentService{
         idempotencyKey:'incident:'+incident.id+':'+offer.id,
         source:'incident'
       });
-      if(out.moderationCase)quarantined++;
+      if(out.moderationCase){quarantined++;effects.push({offerId:offer.id,before,moderationCaseId:out.moderationCase.id});}
     }
-    const next={...incident,quarantinedCount:quarantined};
+    const next={...incident,quarantinedCount:quarantined,effects};
     await repo.put('ModerationIncident',next);
     await this.events?.emit?.(ctx,'moderation.incident.opened',{incidentId:next.id,affectedCount:next.affectedCount,quarantinedCount:quarantined});
     await this.audit?.write?.(ctx,{
@@ -289,6 +346,42 @@ export class ModerationIncidentService{
       reason:next.reason,
       decision:'QUARANTINE_MATCHING_OFFERS',
       result:{affectedCount:next.affectedCount,quarantinedCount:quarantined,selector:next.selector}
+    });
+    return next;
+  }
+  async resolve(ctx,id,{action='keep_quarantined',reason=''}={}){
+    if(!['owner','admin'].includes(ctx.role))throw codedError('owner/admin required','FORBIDDEN',403);
+    if(!['keep_quarantined','recheck'].includes(action))throw codedError('invalid incident resolution','INVALID_INCIDENT_RESOLUTION',400);
+    const statement=String(reason||'').trim();
+    if(statement.length<20)throw codedError('incident resolution reason required','INCIDENT_RESOLUTION_REASON_REQUIRED',400);
+    const repo=this.repoFactory(ctx);
+    const incident=await repo.get('ModerationIncident',id);
+    if(!incident)throw codedError('moderation incident not found','MODERATION_INCIDENT_NOT_FOUND',404);
+    if(incident.status!=='open')throw codedError('moderation incident already resolved','MODERATION_INCIDENT_ALREADY_RESOLVED',409);
+    if(action==='recheck'&&!this.republication?.request)throw codedError('republication service unavailable','REPUBLICATION_SERVICE_UNAVAILABLE',503);
+    const outcomes={checked:0,published:0,waiting:0,blocked:0,skipped:0};
+    if(action==='recheck'){
+      for(const effect of incident.effects||[]){
+        const offer=await repo.get('Offer',effect.offerId);
+        if(!offer||offer.moderationCaseId!==effect.moderationCaseId||offer.moderationStatus!==MODERATION_DECISIONS.QUARANTINED){outcomes.skipped++;continue;}
+        outcomes.checked++;
+        const result=await this.republication.request(ctx,effect.moderationCaseId,{reason:statement});
+        const decision=result.moderationCase.decision;
+        if(decision===MODERATION_DECISIONS.AUTO_APPROVED)outcomes.published++;
+        else if([MODERATION_DECISIONS.AI_REVIEW_REQUIRED,MODERATION_DECISIONS.SECOND_AI_REVIEW].includes(decision))outcomes.waiting++;
+        else outcomes.blocked++;
+      }
+    }
+    const next={...incident,status:'resolved',resolution:{action,reason:statement,actor:{id:ctx.userId,role:ctx.role},outcomes,at:this.now().toISOString()},resolvedAt:this.now().toISOString()};
+    await repo.put('ModerationIncident',next);
+    await this.events?.emit?.(ctx,'moderation.incident.resolved',{incidentId:id,action,outcomes});
+    await this.audit?.write?.(ctx,{
+      actor:{type:'user',id:ctx.userId,role:ctx.role},
+      action:'moderation.incident.resolve',
+      object:{type:'ModerationIncident',id},
+      reason:statement,
+      decision:action,
+      result:outcomes
     });
     return next;
   }

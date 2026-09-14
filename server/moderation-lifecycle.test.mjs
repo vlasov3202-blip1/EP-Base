@@ -6,7 +6,8 @@ import {ModerationHumanExceptionService} from './moderation-ai.mjs';
 import {
   ModerationAppealService,
   ModerationMonitoringService,
-  ModerationIncidentService
+  ModerationIncidentService,
+  ModerationRepublicationService
 } from './moderation-lifecycle.mjs';
 
 const owner={companyId:'c-life',userId:'owner-1',role:'owner'};
@@ -23,7 +24,8 @@ const audit=new AuditLogService({repoFactory:()=>repo,now});
 const moderation=new ModerationService({repoFactory:()=>repo,now,silentRun:true,audit});
 const appeals=new ModerationAppealService({repoFactory:()=>repo,audit,now});
 const monitoring=new ModerationMonitoringService({repoFactory:()=>repo,audit,now});
-const incidents=new ModerationIncidentService({repoFactory:()=>repo,monitoring,audit,now});
+const republication=new ModerationRepublicationService({repoFactory:()=>repo,moderation,audit,now});
+const incidents=new ModerationIncidentService({repoFactory:()=>repo,monitoring,republication,audit,now});
 const human=new ModerationHumanExceptionService({repoFactory:()=>repo,audit,now});
 const schema={categoryId:'auto.parts',version:1,status:'active',silent_run_allowed:true};
 await repo.put('CategorySchema',{id:'schema-life',...schema});
@@ -69,6 +71,19 @@ assert.equal(humanResult.moderationCase.decision,MODERATION_DECISIONS.QUARANTINE
 const resolvedAppeal=await appeals.get(seller,appealResult.appeal.id);
 assert.equal(resolvedAppeal.status,'resolved');
 assert.equal(resolvedAppeal.finalDecision,MODERATION_DECISIONS.QUARANTINED);
+
+await repo.put('ModerationCase',{id:'mod-ai-appeal',objectType:'Offer',offerId:'o-ai-appeal',productId:'p-ai-appeal',sellerId:'seller-1',decision:MODERATION_DECISIONS.AUTO_REJECTED,status:'REJECTED',reasonCodes:['AI_POLICY_VIOLATION']});
+await repo.put('Offer',{id:'o-ai-appeal',productId:'p-ai-appeal',sellerId:'seller-1',moderationStatus:MODERATION_DECISIONS.AUTO_REJECTED,moderationCaseId:'mod-ai-appeal'});
+await assert.rejects(()=>appeals.submit(seller,'mod-ai-appeal',{
+  sellerStatement:'Прикладываю новое доказательство для независимой повторной проверки.',
+  evidenceRefs:['evidence:missing']
+}),error=>error.code==='APPEAL_EVIDENCE_INVALID');
+await repo.put('ModerationEvidence',{id:'modev-valid',moderationCaseId:'mod-ai-appeal',offerId:'o-ai-appeal',productId:'p-ai-appeal',sellerId:'seller-1',status:'active'});
+const aiAppeal=await appeals.submit(seller,'mod-ai-appeal',{
+  sellerStatement:'Прикладываю новое доказательство для независимой повторной проверки.',
+  evidenceRefs:['evidence:modev-valid']
+});
+assert.equal(aiAppeal.moderationCase.decision,MODERATION_DECISIONS.SECOND_AI_REVIEW);
 
 const riskBase=await approved('risk');
 const risk=await monitoring.recordSignal(owner,{
@@ -120,6 +135,19 @@ assert.equal(incident.quarantinedCount,2);
 assert.equal((await repo.get('Offer','o-incident-a')).moderationStatus,MODERATION_DECISIONS.QUARANTINED);
 assert.equal((await repo.get('Offer','o-incident-b')).moderationStatus,MODERATION_DECISIONS.QUARANTINED);
 assert.equal((await incidents.list(owner,{status:'open'})).length,1);
+const resolvedIncident=await incidents.resolve(owner,incident.id,{
+  action:'recheck',
+  reason:'Поставщик подтвердил безопасную партию; запускаем повторные алгоритмические проверки.'
+});
+assert.equal(resolvedIncident.status,'resolved');
+assert.equal(resolvedIncident.resolution.outcomes.checked,2);
+assert.equal(resolvedIncident.resolution.outcomes.published,2);
+assert.equal((await repo.get('Offer','o-incident-a')).moderationStatus,MODERATION_DECISIONS.AUTO_APPROVED);
+assert.equal((await repo.get('Offer','o-incident-b')).moderationStatus,MODERATION_DECISIONS.AUTO_APPROVED);
+assert.equal((await incidents.list(owner,{status:'open'})).length,0);
+const repeatedRepublication=await republication.request(owner,incident.effects[0].moderationCaseId,{reason:'Поставщик подтвердил безопасную партию; запускаем повторные алгоритмические проверки.'});
+assert.equal(repeatedRepublication.reused,true);
+await assert.rejects(()=>republication.request(owner,riskBase.id,{reason:'Повторная проверка опубликованного товара не разрешена.'}),error=>error.code==='REPUBLICATION_NOT_ALLOWED');
 
 await assert.rejects(
   ()=>appeals.submit(seller,risk.moderationCase.id,{sellerStatement:'Недостаточно доказательств',evidenceRefs:[]}),
