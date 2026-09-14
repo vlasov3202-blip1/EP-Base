@@ -78,6 +78,8 @@ export class ModerationAIOrchestrator{
         capability:'moderation',
         input,
         region:this.region,
+        excludeProviderIds:second?previousReviews.map(row=>row.providerId).filter(Boolean):[],
+        allowExcludedFallback:true,
         metadata:{
           feature:'algorithm_first_moderation',
           moderationCaseId:moderationCase.id,
@@ -96,6 +98,7 @@ export class ModerationAIOrchestrator{
         ...review,
         modelVersion:review.modelVersion||providerResult.providerId,
         promptPolicyVersion:review.promptPolicyVersion||moderationCase.aiPolicyVersion,
+        providerId:providerResult.providerId,
         confidenceThreshold:second?0:(forceSecond?1.01:this.confidenceThreshold),
         durationMs,
         costUnits:Number(review.costUnits||review.usage?.total_tokens||0)
@@ -121,7 +124,12 @@ export class ModerationAIOrchestrator{
           firstDecision:firstDecision||null,
           secondDecision
         });
-        return this.#degrade(ctx,moderationCase,'HUMAN_EXCEPTION_QUEUE_DISABLED');
+        return this.#degrade(ctx,{
+          ...moderationCase,
+          decision:MODERATION_DECISIONS.SECOND_AI_REVIEW,
+          status:MODERATION_STATUSES.SECOND_AI_REVIEW,
+          completedAt:null
+        },'HUMAN_EXCEPTION_QUEUE_DISABLED');
       }
       return {...applied,degraded:false,providerId:providerResult.providerId};
     }catch(error){
@@ -186,6 +194,15 @@ export class ModerationAIOrchestrator{
       completedAt:null
     };
     await repo.put('ModerationCase',next);
+    if(next.offerId){
+      const offer=await repo.get('Offer',next.offerId);
+      if(offer)await repo.put('Offer',{
+        ...offer,
+        moderationStatus:next.decision,
+        moderationCaseId:next.id,
+        moderationUpdatedAt:this.now().toISOString()
+      });
+    }
     await this.moderation.emit?.(ctx,'moderation.ai.degraded',next);
     await this.moderation.writeAudit?.(ctx,next);
     return{moderationCase:next,degraded:true,errorCode:code,error:error?String(error.message||error):null};
@@ -231,14 +248,14 @@ export class ModerationAIOrchestrator{
 
   async #recordCost(ctx,review,providerId,usage={}){
     if(!this.aiCosts?.record)return null;
-    return this.aiCosts.record(ctx,{
+    try{return await this.aiCosts.record(ctx,{
       feature:'moderation',
       units:Number(review.costUnits||usage?.total_tokens||0),
       inputUnits:Number(usage?.prompt_tokens||usage?.input_tokens||0),
       outputUnits:Number(usage?.completion_tokens||usage?.output_tokens||0),
       requestId:review.id,
       meta:{moderationCaseId:review.moderationCaseId,providerId,reviewNumber:review.reviewNumber}
-    });
+    });}catch{return null;}
   }
 }
 

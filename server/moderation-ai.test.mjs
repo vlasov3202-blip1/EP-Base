@@ -103,6 +103,7 @@ const second=await orchestrator.process(ctx,aiCase.id);
 assert.equal(second.moderationCase.decision,MODERATION_DECISIONS.HUMAN_EXCEPTION);
 assert.equal(second.humanException.reasonCodes.includes('AI_REVIEW_CONFLICT'),true);
 assert.equal(calls[1].input.reviewStage,'independent_second');
+assert.deepEqual(calls[1].excludeProviderIds,['provider-a']);
 assert.equal(JSON.stringify(calls[1].input).includes('AUTO_APPROVED'),true);
 assert.equal(Object.hasOwn(calls[1].input.context,'previousAiReview'),false);
 assert.equal((await repo.list('ModerationHumanException')).length,1);
@@ -133,6 +134,50 @@ assert.equal(degraded.errorCode,'AI_PROVIDERS_UNAVAILABLE');
 assert.equal(degraded.moderationCase.decision,MODERATION_DECISIONS.AI_REVIEW_REQUIRED);
 assert.equal(degraded.moderationCase.completedAt,null);
 assert.equal((await repo.get('Offer','o-degraded')).moderationStatus,MODERATION_DECISIONS.AI_REVIEW_REQUIRED);
+assert.equal((await repo.list('ModerationHumanException')).length,1);
+
+const noQueueCase=await createOffer('noqueue');
+const noQueueResponses=[
+  {
+    decision:MODERATION_DECISIONS.AUTO_APPROVED,
+    confidence:.5,
+    reasonCodes:['AMBIGUOUS'],
+    evidenceRefs:['product.description'],
+    requiredActions:[],
+    sellerMessage:'Повторная проверка.',
+    safeDetails:{summary:'Неоднозначно',newPattern:false,legalJudgmentRequired:false,criticalHarm:false},
+    suspectedViolation:false,
+    modelVersion:'model-a',
+    promptPolicyVersion:'ai-moderation-v1'
+  },
+  {
+    decision:MODERATION_DECISIONS.AUTO_REJECTED,
+    confidence:.95,
+    reasonCodes:['COUNTERFEIT_LANGUAGE'],
+    evidenceRefs:['product.description'],
+    requiredActions:[],
+    sellerMessage:'Нужна проверка.',
+    safeDetails:{summary:'Конфликт',newPattern:false,legalJudgmentRequired:false,criticalHarm:false},
+    suspectedViolation:true,
+    modelVersion:'model-b',
+    promptPolicyVersion:'ai-moderation-v1'
+  }
+];
+const noQueueOrchestrator=new ModerationAIOrchestrator({
+  repoFactory:()=>repo,
+  moderation,
+  providerRegistry:{execute:async()=>({output:noQueueResponses.shift(),providerId:'provider-only',attempts:[]})},
+  privacyGateway:new PrivacyGateway(),
+  humanQueueEnabled:false,
+  now
+});
+const noQueueFirst=await noQueueOrchestrator.process(ctx,noQueueCase.id);
+assert.equal(noQueueFirst.moderationCase.decision,MODERATION_DECISIONS.SECOND_AI_REVIEW);
+const noQueueSecond=await noQueueOrchestrator.process(ctx,noQueueCase.id);
+assert.equal(noQueueSecond.degraded,true);
+assert.equal(noQueueSecond.errorCode,'HUMAN_EXCEPTION_QUEUE_DISABLED');
+assert.equal(noQueueSecond.moderationCase.decision,MODERATION_DECISIONS.SECOND_AI_REVIEW);
+assert.equal((await repo.get('Offer','o-noqueue')).moderationStatus,MODERATION_DECISIONS.SECOND_AI_REVIEW);
 assert.equal((await repo.list('ModerationHumanException')).length,1);
 
 let requestBody;

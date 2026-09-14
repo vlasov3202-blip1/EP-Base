@@ -226,6 +226,7 @@ export class ModerationService{
       safeDetails:structuredClone(review.safeDetails),
       modelVersion:review.modelVersion,
       promptPolicyVersion:review.promptPolicyVersion,
+      providerId:input.providerId?String(input.providerId):null,
       structurallyValid:true,
       costUnits:Number(input.costUnits||0),
       durationMs:Number(input.durationMs||0),
