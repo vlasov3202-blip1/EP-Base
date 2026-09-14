@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - restore/eineiro-183
+      - feature/algorithm-first-moderation-p0
   workflow_dispatch:
 
 jobs:

@@ -5,6 +5,10 @@ import {ImportService} from './importer.mjs';
 import {createInfrastructure} from './infra.mjs';
 import {CompanyBackupService} from './company-backup.mjs';
 import {createDataStore} from './database.mjs';
+import {ModerationService} from './moderation.mjs';
+import {CategorySchemaService} from './category-schema.mjs';
+import {EventLayer} from './event-layer.mjs';
+import {AuditLogService} from './audit-log.mjs';
 import path from 'node:path';
 
 const DATA_FILE=process.env.EINEIRO_DATA_FILE||path.join(process.cwd(),'data','eineiro.json');
@@ -15,7 +19,12 @@ async function runtime(){
     const store=await createDataStore();
     const auth=new AuthService(store);
     const apiKeys=new ApiKeyService(store);
-    const importer=new ImportService({repoFactory:ctx=>store.tenant(ctx)});
+    const repoFactory=ctx=>store.tenant(ctx);
+    const importer=new ImportService({repoFactory});
+    const moderationEvents=new EventLayer({repoFactory});
+    const moderationAudit=new AuditLogService({repoFactory});
+    const categorySchemas=new CategorySchemaService({repoFactory});
+    const moderation=new ModerationService({repoFactory,events:moderationEvents,audit:moderationAudit});
     const usesPostgres=Boolean(process.env.DATABASE_URL);
     const infra=createInfrastructure({dataFile:usesPostgres?null:DATA_FILE,backupDir:BACKUP_DIR});
     const companyBackups=new CompanyBackupService({store,backupDir:path.join(BACKUP_DIR,'companies')});
@@ -25,7 +34,7 @@ async function runtime(){
     });
     if(infra.backups)infra.queue.register('backup.platform',async()=>infra.backups.create({scope:'platform'}));
     infra.queue.register('backup.company',async job=>companyBackups.create(job.payload.companyId));
-    return{store,auth,apiKeys,importer,infra,companyBackups,usesPostgres};
+    return{store,auth,apiKeys,importer,infra,companyBackups,categorySchemas,moderation,usesPostgres};
   })();
   return runtimePromise;
 }
@@ -34,10 +43,12 @@ async function body(req,{maxBytes=1_000_000}={}){let size=0;const chunks=[];for 
 function bearer(req){const h=String(req.headers.authorization||'');return h.startsWith('Bearer ')?h.slice(7).trim():null}
 function apiKey(req){return String(req.headers['x-api-key']||'').trim()||null}
 export async function authenticateRequest(req){const {auth,apiKeys}=await runtime();const key=apiKey(req);if(key)return apiKeys.authenticate(key);const token=bearer(req);if(!token)throw Object.assign(new Error('authorization required'),{status:401,code:'AUTH_REQUIRED'});return auth.authenticate(token)}
-function scopeFor(resource,method){const base={products:'products',orders:'orders',tasks:'tasks',messages:'messages',events:'events',audit:'audit'}[resource];return `${base}:${method==='GET'?'read':'write'}`}
+function scopeFor(resource,method){const base={products:'products',orders:'orders',tasks:'tasks',messages:'messages',events:'events',audit:'audit',moderation:'moderation'}[resource];return `${base}:${method==='GET'?'read':'write'}`}
 async function authorize(req,{permission=null,scope=null}={}){const ctx=await authenticateRequest(req);if(ctx.role==='api'){const {apiKeys}=await runtime();apiKeys.requireScope(ctx,scope);return ctx}if(permission)assertCan(ctx,permission);return ctx}
 function adminOnly(ctx){if(ctx.role!=='owner'&&ctx.role!=='admin')throw Object.assign(new Error('owner/admin required'),{status:403,code:'FORBIDDEN'});}
 function platformAdminOnly(ctx){if(ctx.role!=='admin')throw Object.assign(new Error('platform admin required'),{status:403,code:'FORBIDDEN'});}
+function moderationRoleOnly(ctx){if(!['owner','manager','seller','api'].includes(ctx.role))throw Object.assign(new Error('moderation access required'),{status:403,code:'FORBIDDEN'});}
+function moderationObjectOnly(ctx,offer){if(ctx.role!=='seller')return;const sellerId=ctx.user?.sellerId||ctx.userId;if(!offer||offer.sellerId!==sellerId)throw Object.assign(new Error('offer access denied'),{status:403,code:'FORBIDDEN'});}
 
 export async function handlePlatformApi(req,res){
   const url=new URL(req.url,'http://local');
@@ -95,6 +106,38 @@ export async function handlePlatformApi(req,res){
   }
   if(req.method==='POST'&&url.pathname==='/api/v1/import/products'){
     try{const ctx=await authorize(req,{permission:'inventory.write',scope:'products:write'});const p=await body(req,{maxBytes:8_000_000});const result=await rt.importer.importProducts(ctx,p);return finish(200,result);}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'IMPORT_ERROR'})}
+  }
+  if(req.method==='POST'&&url.pathname==='/api/v1/moderation/cases'){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:write'});moderationRoleOnly(ctx);
+      const p=await body(req,{maxBytes:200_000});
+      if(!p.offerId)throw Object.assign(new Error('offerId required'),{status:400,code:'OFFER_ID_REQUIRED'});
+      const repo=rt.store.tenant(ctx);const offer=await repo.get('Offer',p.offerId);moderationObjectOnly(ctx,offer);
+      if(!offer)throw Object.assign(new Error('offer not found'),{status:404,code:'OFFER_NOT_FOUND'});
+      const product=await repo.get('Product',offer.productId);
+      const categorySchema=await rt.categorySchemas.active(ctx,product?.categoryId||product?.category);
+      const moderationCase=await rt.moderation.review(ctx,{offerId:p.offerId,categorySchema,force:false,trigger:p.trigger||'submission',source:p.source||'api'});
+      return finish(moderationCase.reused?200:201,{moderationCase});
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_ERROR'})}
+  }
+  const moderationCaseMatch=url.pathname.match(/^\/api\/v1\/moderation\/cases\/([^/]+)$/);
+  if(req.method==='GET'&&moderationCaseMatch){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:read'});moderationRoleOnly(ctx);
+      const moderationCase=await rt.moderation.get(ctx,moderationCaseMatch[1]);
+      if(!moderationCase)return finish(404,{error:'moderation case not found',code:'MODERATION_CASE_NOT_FOUND'});
+      const offer=moderationCase.offerId?await rt.store.tenant(ctx).get('Offer',moderationCase.offerId):null;moderationObjectOnly(ctx,offer);
+      return finish(200,{moderationCase});
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_ERROR'})}
+  }
+  const offerModerationMatch=url.pathname.match(/^\/api\/v1\/offers\/([^/]+)\/moderation$/);
+  if(req.method==='GET'&&offerModerationMatch){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:read'});moderationRoleOnly(ctx);
+      const offer=await rt.store.tenant(ctx).get('Offer',offerModerationMatch[1]);moderationObjectOnly(ctx,offer);
+      if(!offer)return finish(404,{error:'offer not found',code:'OFFER_NOT_FOUND'});
+      return finish(200,{offer,items:await rt.moderation.historyForOffer(ctx,offer.id)});
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_ERROR'})}
   }
   const m=url.pathname.match(/^\/api\/v1\/(products|orders|tasks|messages|events|audit)$/);
   if(m){
