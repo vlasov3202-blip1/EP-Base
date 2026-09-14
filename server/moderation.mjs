@@ -206,7 +206,7 @@ export class ModerationService{
     if(!moderationCase)throw codedError('moderation case not found','MODERATION_CASE_NOT_FOUND',404);
     if(moderationCase.decision!==MODERATION_DECISIONS.AI_REVIEW_REQUIRED&&moderationCase.decision!==MODERATION_DECISIONS.SECOND_AI_REVIEW)throw codedError('AI review is not required','AI_REVIEW_NOT_REQUIRED',409);
     const review=validateAiReview(input);
-    const blocking=(await repo.list('ModerationRuleResult')).filter(row=>row.moderationCaseId===moderationCase.id&&row.result==='fail'&&row.severity==='block');
+    const blocking=(await repo.list('ModerationRuleResult')).filter(row=>row.moderationCaseId===moderationCase.id&&row.result==='fail'&&['block','fatal','quarantine'].includes(row.severity));
     if(blocking.length&&review.decision===MODERATION_DECISIONS.AUTO_APPROVED)throw codedError('AI cannot override a hard rule','HARD_RULE_OVERRIDE_FORBIDDEN',409);
     const reviewNumber=(await repo.list('ModerationAiReview')).filter(row=>row.moderationCaseId===moderationCase.id).length+1;
     const needsSecond=review.confidence<Number(input.confidenceThreshold??0.78);
@@ -256,16 +256,20 @@ export class ModerationService{
     const repo=this.repoFactory(ctx);
     const moderationCase=await repo.get('ModerationCase',moderationCaseId);
     if(!moderationCase)return null;
-    const [ruleResults,aiReviews,humanExceptions]=await Promise.all([
+    const [ruleResults,aiReviews,humanExceptions,appeals,signals]=await Promise.all([
       repo.list('ModerationRuleResult'),
       repo.list('ModerationAiReview'),
-      repo.list('ModerationHumanException')
+      repo.list('ModerationHumanException'),
+      repo.list('ModerationAppeal'),
+      repo.list('ModerationPostPublicationSignal')
     ]);
     return {
       ...moderationCase,
       ruleResults:ruleResults.filter(row=>row.moderationCaseId===moderationCase.id),
       aiReviews:aiReviews.filter(row=>row.moderationCaseId===moderationCase.id),
-      humanExceptions:humanExceptions.filter(row=>row.moderationCaseId===moderationCase.id)
+      humanExceptions:humanExceptions.filter(row=>row.moderationCaseId===moderationCase.id),
+      appeals:appeals.filter(row=>row.moderationCaseId===moderationCase.id),
+      postPublicationSignals:signals.filter(row=>row.moderationCaseId===moderationCase.id)
     };
   }
 

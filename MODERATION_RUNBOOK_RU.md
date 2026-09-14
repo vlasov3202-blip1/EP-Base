@@ -26,6 +26,8 @@ MODERATION_AI_CONFIDENCE_THRESHOLD=0.78
 MODERATION_HIGH_RISK_THRESHOLD=70
 SECOND_AI_REVIEW_ENABLED=true
 HUMAN_EXCEPTION_QUEUE_ENABLED=true
+MODERATION_APPEALS_ENABLED=true
+POST_PUBLICATION_MONITORING_ENABLED=true
 MODERATION_KILL_SWITCH=false
 ```
 
@@ -49,6 +51,9 @@ npm run dev
 3. Если получено `SECOND_AI_REVIEW`, повторить тот же запрос. Второй запрос формируется независимо.
 4. Исключения владельца: `GET /api/v1/moderation/human-exceptions`.
 5. Решение владельца: `POST /api/v1/moderation/human-exceptions/{id}/resolve`.
+6. Апелляция с новой уликой: `POST /api/v1/moderation/cases/{caseId}/appeals`.
+7. Сигнал постконтроля: `POST /api/v1/moderation/post-publication-signals`.
+8. Массовый инцидент с ограниченным selector: `POST /api/v1/moderation/incidents`.
 
 Для API-ключей нужны scopes `moderation:read` и `moderation:write`. Ручное решение разрешено только ролям `owner` и `admin`.
 

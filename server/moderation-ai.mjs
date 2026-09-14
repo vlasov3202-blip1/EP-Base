@@ -109,10 +109,11 @@ export class ModerationAIOrchestrator{
       if(!second)return {...applied,degraded:false,providerId:providerResult.providerId};
 
       const first=previousReviews[0];
-      const firstDecision=first?.proposedDecision||first?.decision;
+      const firstDecision=first?.proposedDecision||first?.decision||moderationCase.appealPreviousDecision;
       const secondDecision=applied.review.proposedDecision||review.decision;
       const reasons=[];
       if(firstDecision&&firstDecision!==secondDecision)reasons.push('AI_REVIEW_CONFLICT');
+      if(moderationCase.appealId&&firstDecision!==secondDecision)reasons.push('APPEAL_NEW_EVIDENCE');
       if(Number(applied.review.confidence)<this.confidenceThreshold)reasons.push('LOW_CONFIDENCE_AFTER_SECOND_REVIEW');
       if(review.safeDetails?.legalJudgmentRequired)reasons.push('LEGAL_JUDGMENT_REQUIRED');
       if(review.safeDetails?.newPattern)reasons.push('NEW_FRAUD_PATTERN');
@@ -130,6 +131,16 @@ export class ModerationAIOrchestrator{
           status:MODERATION_STATUSES.SECOND_AI_REVIEW,
           completedAt:null
         },'HUMAN_EXCEPTION_QUEUE_DISABLED');
+      }
+      if(moderationCase.appealId){
+        const appeal=await repo.get('ModerationAppeal',moderationCase.appealId);
+        if(appeal)await repo.put('ModerationAppeal',{
+          ...appeal,
+          status:'resolved_automatically',
+          outcome:'upheld',
+          finalDecision:secondDecision,
+          resolvedAt:this.now().toISOString()
+        });
       }
       return {...applied,degraded:false,providerId:providerResult.providerId};
     }catch(error){
@@ -229,6 +240,10 @@ export class ModerationAIOrchestrator{
       resolvedAt:null
     };
     await repo.put('ModerationHumanException',exception);
+    if(moderationCase.appealId){
+      const appeal=await repo.get('ModerationAppeal',moderationCase.appealId);
+      if(appeal)await repo.put('ModerationAppeal',{...appeal,status:'human_review',humanExceptionId:id});
+    }
     const next={
       ...moderationCase,
       decision:MODERATION_DECISIONS.HUMAN_EXCEPTION,
@@ -304,6 +319,17 @@ export class ModerationHumanExceptionService{
     };
     await repo.put('ModerationHumanException',nextException);
     await repo.put('ModerationCase',nextCase);
+    if(moderationCase.appealId){
+      const appeal=await repo.get('ModerationAppeal',moderationCase.appealId);
+      if(appeal)await repo.put('ModerationAppeal',{
+        ...appeal,
+        status:'resolved',
+        outcome:decision===appeal.previousDecision?'upheld':'overturned',
+        finalDecision:decision,
+        humanExceptionId:id,
+        resolvedAt:at
+      });
+    }
     if(nextCase.offerId){
       const offer=await repo.get('Offer',nextCase.offerId);
       if(offer)await repo.put('Offer',{

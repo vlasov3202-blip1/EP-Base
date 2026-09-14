@@ -14,6 +14,7 @@ import {AiCostService} from './ai-costs.mjs';
 import {PrivacyGateway} from './privacy-gateway.mjs';
 import {ModerationAIOrchestrator,ModerationHumanExceptionService} from './moderation-ai.mjs';
 import {OpenAiCompatibleModerationProvider} from './openai-moderation-provider.mjs';
+import {ModerationAppealService,ModerationMonitoringService,ModerationIncidentService} from './moderation-lifecycle.mjs';
 import path from 'node:path';
 
 const DATA_FILE=process.env.EINEIRO_DATA_FILE||path.join(process.cwd(),'data','eineiro.json');
@@ -53,6 +54,24 @@ async function runtime(){
       region:process.env.EINEIRO_AI_REGION||null
     });
     const moderationHuman=new ModerationHumanExceptionService({repoFactory,audit:moderationAudit,events:moderationEvents});
+    const moderationAppeals=new ModerationAppealService({
+      repoFactory,
+      audit:moderationAudit,
+      events:moderationEvents,
+      enabled:envFlag('MODERATION_APPEALS_ENABLED',true)
+    });
+    const moderationMonitoring=new ModerationMonitoringService({
+      repoFactory,
+      audit:moderationAudit,
+      events:moderationEvents,
+      enabled:envFlag('POST_PUBLICATION_MONITORING_ENABLED',true)
+    });
+    const moderationIncidents=new ModerationIncidentService({
+      repoFactory,
+      monitoring:moderationMonitoring,
+      audit:moderationAudit,
+      events:moderationEvents
+    });
     const usesPostgres=Boolean(process.env.DATABASE_URL);
     const infra=createInfrastructure({dataFile:usesPostgres?null:DATA_FILE,backupDir:BACKUP_DIR});
     const companyBackups=new CompanyBackupService({store,backupDir:path.join(BACKUP_DIR,'companies')});
@@ -62,7 +81,7 @@ async function runtime(){
     });
     if(infra.backups)infra.queue.register('backup.platform',async()=>infra.backups.create({scope:'platform'}));
     infra.queue.register('backup.company',async job=>companyBackups.create(job.payload.companyId));
-    return{store,auth,apiKeys,importer,infra,companyBackups,categorySchemas,moderation,moderationAi,moderationHuman,usesPostgres};
+    return{store,auth,apiKeys,importer,infra,companyBackups,categorySchemas,moderation,moderationAi,moderationHuman,moderationAppeals,moderationMonitoring,moderationIncidents,usesPostgres};
   })();
   return runtimePromise;
 }
@@ -149,6 +168,49 @@ export async function handlePlatformApi(req,res){
       const moderationCase=await rt.moderation.review(ctx,{offerId:p.offerId,categorySchema,force:false,trigger:p.trigger||'submission',source:p.source||'api'});
       return finish(moderationCase.reused?200:201,{moderationCase});
     }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_ERROR'})}
+  }
+  const moderationAppealSubmitMatch=url.pathname.match(/^\/api\/v1\/moderation\/cases\/([^/]+)\/appeals$/);
+  if(req.method==='POST'&&moderationAppealSubmitMatch){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:write'});moderationRoleOnly(ctx);
+      const moderationCase=await rt.moderation.get(ctx,moderationAppealSubmitMatch[1]);
+      if(!moderationCase)return finish(404,{error:'moderation case not found',code:'MODERATION_CASE_NOT_FOUND'});
+      const offer=moderationCase.offerId?await rt.store.tenant(ctx).get('Offer',moderationCase.offerId):null;moderationObjectOnly(ctx,offer);
+      const result=await rt.moderationAppeals.submit(ctx,moderationCase.id,await body(req,{maxBytes:200_000}));
+      return finish(result.reused?200:201,result);
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_APPEAL_ERROR'})}
+  }
+  if(req.method==='GET'&&url.pathname==='/api/v1/moderation/appeals'){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:read'});moderationRoleOnly(ctx);
+      return finish(200,{items:await rt.moderationAppeals.list(ctx,{status:url.searchParams.get('status')||null})});
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_APPEAL_ERROR'})}
+  }
+  const moderationAppealGetMatch=url.pathname.match(/^\/api\/v1\/moderation\/appeals\/([^/]+)$/);
+  if(req.method==='GET'&&moderationAppealGetMatch){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:read'});moderationRoleOnly(ctx);
+      const appeal=await rt.moderationAppeals.get(ctx,moderationAppealGetMatch[1]);
+      return appeal?finish(200,{appeal}):finish(404,{error:'appeal not found',code:'MODERATION_APPEAL_NOT_FOUND'});
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_APPEAL_ERROR'})}
+  }
+  if(req.method==='POST'&&url.pathname==='/api/v1/moderation/post-publication-signals'){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:write'});moderationAiRoleOnly(ctx);
+      return finish(201,await rt.moderationMonitoring.recordSignal(ctx,await body(req,{maxBytes:200_000})));
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_SIGNAL_ERROR'})}
+  }
+  if(req.method==='GET'&&url.pathname==='/api/v1/moderation/incidents'){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:read'});adminOnly(ctx);
+      return finish(200,{items:await rt.moderationIncidents.list(ctx,{status:url.searchParams.get('status')||null})});
+    }catch(e){return finish(e.status||403,{error:e.message,code:e.code||'MODERATION_INCIDENT_ERROR'})}
+  }
+  if(req.method==='POST'&&url.pathname==='/api/v1/moderation/incidents'){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:write'});adminOnly(ctx);
+      return finish(201,{incident:await rt.moderationIncidents.open(ctx,await body(req,{maxBytes:200_000}))});
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_INCIDENT_ERROR'})}
   }
   const moderationAiMatch=url.pathname.match(/^\/api\/v1\/moderation\/cases\/([^/]+)\/ai-review$/);
   if(req.method==='POST'&&moderationAiMatch){

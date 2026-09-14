@@ -40,6 +40,7 @@ const rt=await getPlatformRuntimeForTests();
 await rt.auth.register({companyId,userId:'owner1',email:'owner-'+suffix+'@test.local',password:'password123',role:'owner'});
 await rt.auth.register({companyId,userId:'seller1',email:'seller-'+suffix+'@test.local',password:'password123',role:'seller'});
 await rt.auth.register({companyId:otherCompanyId,userId:'owner2',email:'other-'+suffix+'@test.local',password:'password123',role:'owner'});
+const ownerLogin=await rt.auth.login({companyId,email:'owner-'+suffix+'@test.local',password:'password123'});
 const sellerLogin=await rt.auth.login({companyId,email:'seller-'+suffix+'@test.local',password:'password123'});
 const otherLogin=await rt.auth.login({companyId:otherCompanyId,email:'other-'+suffix+'@test.local',password:'password123'});
 const ctx={companyId,userId:'seller1',role:'seller'};
@@ -98,5 +99,64 @@ assert.equal(out.body.moderationCase.reused,true);
 
 out=await call('GET','/api/v1/moderation/cases/'+caseId,null,otherLogin.token);
 assert.equal(out.status,404);
+
+await rt.categorySchemas.put(ctx,{categoryId:'restricted',moderation:{forbidden:true,silent_run_allowed:true}});
+await repo.put('Product',{id:'product-appeal',name:'Товар с документом',categoryId:'restricted',images:['photo']});
+await offerService.create(ctx,{id:'offer-appeal',productId:'product-appeal',sellerId:'seller1',price:1000,stock:1,condition:'used',visualAssetReady:true,visualQualityScore:90,deliveryOptions:[{nationwide:true}]});
+out=await call('POST','/api/v1/moderation/cases',{offerId:'offer-appeal'},sellerLogin.token);
+assert.equal(out.status,201);
+assert.equal(out.body.moderationCase.decision,'AUTO_REJECTED');
+const rejectedCaseId=out.body.moderationCase.id;
+
+out=await call('POST','/api/v1/moderation/cases/'+rejectedCaseId+'/appeals',{
+  sellerStatement:'Предоставляю новое подтверждение законности происхождения товара.',
+  evidenceRefs:['document:origin-api']
+},sellerLogin.token);
+assert.equal(out.status,201);
+assert.equal(out.body.moderationCase.decision,'HUMAN_EXCEPTION');
+const humanExceptionId=out.body.appeal.humanExceptionId;
+
+out=await call('GET','/api/v1/moderation/appeals',null,sellerLogin.token);
+assert.equal(out.status,200);
+assert.equal(out.body.items.some(x=>x.moderationCaseId===rejectedCaseId),true);
+
+out=await call('POST','/api/v1/moderation/human-exceptions/'+humanExceptionId+'/resolve',{
+  decision:'QUARANTINED',
+  reason:'Документ передан на дополнительную юридическую проверку.',
+  evidenceRefs:['document:origin-api']
+},ownerLogin.token);
+assert.equal(out.status,200);
+assert.equal(out.body.humanException.status,'resolved');
+
+out=await call('POST','/api/v1/moderation/post-publication-signals',{
+  offerId:'offer-1',
+  type:'complaint_spike',
+  evidenceRefs:['metric:complaints'],
+  idempotencyKey:'api-signal-'+suffix
+},sellerLogin.token);
+assert.equal(out.status,403);
+
+out=await call('POST','/api/v1/moderation/post-publication-signals',{
+  offerId:'offer-1',
+  type:'complaint_spike',
+  evidenceRefs:['metric:complaints'],
+  idempotencyKey:'api-signal-'+suffix
+},ownerLogin.token);
+assert.equal(out.status,201);
+assert.equal(out.body.moderationCase.decision,'AI_REVIEW_REQUIRED');
+
+await repo.put('Product',{id:'product-incident',name:'Партия детали',categoryId:'auto.parts',manufacturer:'Hyundai',partNumber:'INC-1',images:['photo'],condition:'used'});
+await offerService.create(ctx,{id:'offer-incident',productId:'product-incident',sellerId:'seller1',price:9000,stock:1,condition:'used',visualAssetReady:true,visualQualityScore:90,deliveryOptions:[{nationwide:true}]});
+out=await call('POST','/api/v1/moderation/cases',{offerId:'offer-incident'},sellerLogin.token);
+assert.equal(out.body.moderationCase.decision,'AUTO_APPROVED');
+out=await call('POST','/api/v1/moderation/incidents',{
+  title:'Отзыв тестовой партии',
+  reason:'Подтверждён дефект партии поставщиком.',
+  selector:{offerIds:['offer-incident']},
+  evidenceRefs:['notice:test']
+},ownerLogin.token);
+assert.equal(out.status,201);
+assert.equal(out.body.incident.quarantinedCount,1);
+assert.equal((await repo.get('Offer','offer-incident')).moderationStatus,'QUARANTINED');
 
 console.log('EINEIRO moderation API tests: OK');
