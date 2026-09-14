@@ -23,7 +23,7 @@ export class JsonFileStore{
   listEvents(companyId){return this.db.events.filter(x=>x.companyId===companyId).map(value=>structuredClone(value));}
   listAllApiKeys(){return Object.values(this.db.records||{}).filter(x=>x&&x.hash&&x.companyId&&x.id).map(value=>structuredClone(value));}
   listCompanyIds(){const ids=new Set();for(const u of Object.values(this.db.users||{}))if(u?.companyId)ids.add(u.companyId);for(const r of Object.values(this.db.records||{}))if(r?.companyId)ids.add(r.companyId);return [...ids].sort();}
-  exportCompany(companyId){const records=Object.values(this.db.records||{}).filter(x=>x?.companyId===companyId).map(value=>structuredClone(value));const users=Object.values(this.db.users||{}).filter(x=>x?.companyId===companyId).map(value=>structuredClone(value));return {companyId,users,records,audit:this.listAudit(companyId),events:this.listEvents(companyId),exportedAt:new Date().toISOString()};}
+  exportCompany(companyId){const prefix=companyId+':';const records=Object.entries(this.db.records||{}).filter(([key,value])=>key.startsWith(prefix)&&value?.companyId===companyId).map(([key,value])=>{const suffix=key.slice(prefix.length);const split=suffix.indexOf(':');return{...structuredClone(value),__entity:split>=0?suffix.slice(0,split):null,__recordId:split>=0?suffix.slice(split+1):value.id}});const users=Object.values(this.db.users||{}).filter(x=>x?.companyId===companyId).map(value=>structuredClone(value));return {companyId,users,records,audit:this.listAudit(companyId),events:this.listEvents(companyId),exportedAt:new Date().toISOString()};}
 }
 
 export class DurableTenantRepository{
