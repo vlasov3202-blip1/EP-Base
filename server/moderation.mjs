@@ -269,6 +269,45 @@ export class ModerationService{
       .sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
   }
 
+  async setCategoryPolicy(ctx,input={}){
+    if(!input.categoryId)throw codedError('categoryId required','CATEGORY_ID_REQUIRED',400);
+    const repo=this.repoFactory(ctx);
+    const current=await activeSchema(repo,input.categoryId);
+    const record={
+      id:input.id||'moderation-policy:'+input.categoryId,
+      categoryId:input.categoryId,
+      version:Number(input.version||Number(current?.version||0)+1),
+      status:input.status||'active',
+      mandatoryFields:[...new Set(input.mandatoryFields||input.requiredFields||[])],
+      moderation:{
+        forbidden:Boolean(input.forbidden),
+        restricted:Boolean(input.restricted),
+        required_documents:[...new Set(input.documents||input.requiredDocuments||[])],
+        required_certificates:[...new Set(input.certificates||input.requiredCertificates||[])],
+        silent_run_allowed:input.silentRunAllowed!==false
+      },
+      createdAt:this.now().toISOString()
+    };
+    await repo.put('CategorySchema',record);
+    return record;
+  }
+
+  async evaluate(ctx,product={}){
+    const repo=this.repoFactory(ctx);
+    const schema=await activeSchema(repo,product.categoryId||product.category)||{};
+    const result=await runAlgorithmicModeration({
+      repo,
+      product,
+      schema,
+      now:this.now(),
+      silentRun:this.silentRun,
+      inventoryFreshHours:this.inventoryFreshHours,
+      aiThreshold:this.aiThreshold,
+      highRiskThreshold:this.highRiskThreshold
+    });
+    return{allowed:result.decision===MODERATION_DECISIONS.AUTO_APPROVED,decision:result.decision,riskScore:result.riskScore,issues:result.results.filter(row=>row.result==='fail'),requiredActions:result.requiredActions};
+  }
+
   async emit(ctx,type,moderationCase){
     if(!this.events?.emit)return null;
     return this.events.emit(ctx,type,{
