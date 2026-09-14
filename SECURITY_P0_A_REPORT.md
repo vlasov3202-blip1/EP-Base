@@ -78,6 +78,9 @@ No secret values are committed.
 
 This slice does not claim completion of SECURITY MAXIMUM:
 
+- the GitHub repository is currently public and exposes the complete source tree;
+- the repository currently has zero GitHub rulesets; mandatory PR review, required status checks, signed commits, linear history, deletion/force-push denial and owner bypass policy are therefore not enforced by a ruleset;
+- the connected GitHub integration has no administration permission to inspect or change classic branch protection (`403 Resource not accessible by integration`); the ROOT OWNER must apply the repository-perimeter settings;
 - rate limits are process-local until the P0-B distributed store is introduced;
 - FIDO2/passkeys, Root Break Glass and owner recovery are P0-B;
 - PostgreSQL RLS and separate DB identities are P0-B;
@@ -92,4 +95,4 @@ Revert the Security P0-A commit as a single unit before deployment. Session hash
 
 ## Owner actions
 
-No secret needs to be sent in chat. Before a production deployment, the owner must configure the trusted database CA and infrastructure gates described above; until then the PR stays draft.
+No secret needs to be sent in chat. Before a production deployment, the owner must decide whether the source repository is intentionally public, create a mandatory `main` ruleset, configure the trusted database CA and enable the infrastructure gates described above. Until then the PR stays draft.
