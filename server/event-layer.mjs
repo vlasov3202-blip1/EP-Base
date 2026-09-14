@@ -10,5 +10,7 @@ export const EVENTS=Object.freeze({
   ORDER_CREATED:'order.created',ORDER_PAID:'order.paid',ORDER_CANCELLED:'order.cancelled',ORDER_RETURNED:'order.returned',
   INVENTORY_LOW:'inventory.low',INVENTORY_CHANGED:'inventory.changed',PRICE_CHANGED:'price.changed',
   SLA_BREACH:'sla.breach',DEMAND_UNSERVED:'demand.unserved',OFFER_PUBLISHED:'offer.published',OFFER_SOLD:'offer.sold',
-  SHIPMENT_DELAYED:'shipment.delayed',DISAGREEMENT_OPENED:'disagreement.opened',MARKETING_RESULT:'marketing.result',\n  MODERATION_RECEIVED:'moderation.received',MODERATION_ALGORITHM_COMPLETED:'moderation.algorithm.completed',\n  MODERATION_AI_COMPLETED:'moderation.ai.completed',MODERATION_HUMAN_EXCEPTION:'moderation.human.exception'
+  SHIPMENT_DELAYED:'shipment.delayed',DISAGREEMENT_OPENED:'disagreement.opened',MARKETING_RESULT:'marketing.result',
+  MODERATION_RECEIVED:'moderation.received',MODERATION_ALGORITHM_COMPLETED:'moderation.algorithm.completed',
+  MODERATION_AI_COMPLETED:'moderation.ai.completed',MODERATION_HUMAN_EXCEPTION:'moderation.human.exception'
 });
