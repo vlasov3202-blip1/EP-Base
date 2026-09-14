@@ -9,7 +9,10 @@ repo.put(ctx,'Product',{id:'p1',name:'Кресло',categoryId:'home.chair',attr
 repo.put(ctx,'SellerScore',{id:'seller-score:s1',sellerId:'s1',score:92});repo.put(ctx,'SellerScore',{id:'seller-score:s2',sellerId:'s2',score:65});
 const os=new OfferService({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T12:00:00Z')});
 const good=await os.create(ctx,{id:'o1',productId:'p1',sellerId:'s1',price:30000,stock:5,region:'Москва',deliveryOptions:[{nationwide:true}],visualAssetReady:true,visualQualityScore:90});
-await os.create(ctx,{id:'o2',productId:'p2',sellerId:'s2',price:25000,stock:5,region:'Москва',deliveryOptions:[{nationwide:true}],visualAssetReady:true,visualQualityScore:90});
+const second=await os.create(ctx,{id:'o2',productId:'p2',sellerId:'s2',price:25000,stock:5,region:'Москва',deliveryOptions:[{nationwide:true}],visualAssetReady:true,visualQualityScore:90});
+assert.equal((await new OfferRankingService({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T12:00:00Z')}).rank(ctx,{region:'Москва'})).length,0);
+repo.put(ctx,'Offer',{...good,moderationStatus:'AUTO_APPROVED',moderationCaseId:'mod-o1'});
+repo.put(ctx,'Offer',{...second,moderationStatus:'AUTO_APPROVED',moderationCaseId:'mod-o2'});
 repo.put(ctx,'ProductMetrics',{id:'p1',productId:'p1',views:200,orders:10,favorites:20});repo.put(ctx,'ProductMetrics',{id:'p2',productId:'p2',views:200,orders:3,favorites:5});
 repo.put(ctx,'ChannelConnection',{id:'avito',channel:'avito',enabled:true,status:'connected'});
 const ranking=await new OfferRankingService({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T12:00:00Z')}).rank(ctx,{intent:{category:'home.chair',attributes:{material:'oak'}},region:'Москва'});assert.equal(ranking[0].offerId,'o1');assert.equal(ranking[0].paidPromotionWeight,0);assert.equal(ranking.some(x=>x.offerId==='o2'),true);
