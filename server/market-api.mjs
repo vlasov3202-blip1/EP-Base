@@ -22,10 +22,11 @@ export async function handleMarketApi(request,response){
   if(request.method==='POST'&&url.pathname==='/api/vision/resolve'){
     try{
       if(process.env.VISION_KILL_SWITCH==='true')throw Object.assign(new Error('vision is temporarily disabled'),{status:503,code:'VISION_DISABLED'});
+      const {rateLimiter}=await getPlatformRuntimeForTests();
       const client=clientAddress(request);
-      enforceRateLimit(request,{scope:'vision-minute',key:client,limit:Number(process.env.VISION_RATE_LIMIT_PER_MINUTE||6),windowMs:60_000});
-      enforceRateLimit(request,{scope:'vision-day',key:client,limit:Number(process.env.VISION_RATE_LIMIT_PER_DAY||100),windowMs:86_400_000});
-      enforceRateLimit(request,{scope:'vision-global-minute',key:'global',limit:Number(process.env.VISION_GLOBAL_RATE_LIMIT_PER_MINUTE||120),windowMs:60_000});
+      await enforceRateLimit(request,{scope:'vision-minute',key:client,limit:Number(process.env.VISION_RATE_LIMIT_PER_MINUTE||6),windowMs:60_000,limiter:rateLimiter});
+      await enforceRateLimit(request,{scope:'vision-day',key:client,limit:Number(process.env.VISION_RATE_LIMIT_PER_DAY||100),windowMs:86_400_000,limiter:rateLimiter});
+      await enforceRateLimit(request,{scope:'vision-global-minute',key:'global',limit:Number(process.env.VISION_GLOBAL_RATE_LIMIT_PER_MINUTE||120),windowMs:60_000,limiter:rateLimiter});
       const body=await readJson(request,{maxBytes:Number(process.env.VISION_MAX_BODY_BYTES||6_000_000),maxDepth:12,maxNodes:5000});
       if(!Array.isArray(body.frames)||body.frames.length>8)throw Object.assign(new Error('invalid frame count'),{status:400,code:'VISION_FRAME_LIMIT'});
       const result=await createVision().resolve(PUBLIC_MARKET_CTX,{frames:body.frames,voiceText:body.voiceText||'',locale:body.locale||'ru-RU',catalogLimit:body.catalogLimit||24,cursors:body.cursors||{}});

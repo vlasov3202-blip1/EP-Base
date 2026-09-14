@@ -41,6 +41,7 @@ export async function handleControlPlaneApi(req,res){
     if(req.method==='GET'&&url.pathname==='/api/v1/control-plane/moderation'){await access.require(ctx,'platform.moderation.read');return json(res,200,{items:await repo.list('ModerationCase')});}
     if(req.method==='GET'&&url.pathname==='/api/v1/control-plane/experiments'){await access.require(ctx,'platform.experiments.read');return json(res,200,{tests:await repo.list('MarketingTest'),memory:await repo.list('MarketingMemory')});}
     if(req.method==='GET'&&url.pathname==='/api/v1/control-plane/audit'){await access.require(ctx,'platform.audit.read');return json(res,200,{items:(await store.exportCompany(company)).audit||[]});}
+    if(req.method==='GET'&&url.pathname==='/api/v1/control-plane/audit/integrity'){await access.require(ctx,'platform.audit.read');return json(res,200,{companyId:company,integrity:await rt.audit.verify(cctx),alerts:await repo.list('SecurityAlert')});}
     return json(res,404,{error:'not found'});
   }catch(e){const status=e.code==='FORBIDDEN_CAPABILITY'?403:e.status||500;return json(res,status,{error:e.message,code:e.code||'CONTROL_PLANE_ERROR'});}
 }

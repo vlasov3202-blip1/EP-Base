@@ -26,6 +26,11 @@ const market=await readFile(path.join(root,'server','market-api.mjs'),'utf8');
 if(!market.includes("scope:'vision-minute'")||!market.includes('VISION_KILL_SWITCH'))findings.push('Vision API lacks budget controls');
 const postgres=await readFile(path.join(root,'server','postgres-storage.mjs'),'utf8');
 if(!postgres.includes('rejectUnauthorized:true'))findings.push('PostgreSQL certificate verification is not strict');
+if(!postgres.includes('ENABLE ROW LEVEL SECURITY')||!postgres.includes("set_config('eineiro.company_id'"))findings.push('PostgreSQL tenant RLS is not configured');
+const rateLimit=await readFile(path.join(root,'server','distributed-rate-limit.mjs'),'utf8');
+if(!rateLimit.includes('ON CONFLICT(bucket_key) DO UPDATE')||!rateLimit.includes("createHmac('sha256'")||!rateLimit.includes('RATE_LIMIT_HASH_KEY_REQUIRED'))findings.push('distributed rate limit is not atomic or privacy-safe');
+const audit=await readFile(path.join(root,'server','audit-log.mjs'),'utf8');
+if(!audit.includes("createHmac('sha256'")||!audit.includes('PREVIOUS_HASH_MISMATCH'))findings.push('audit integrity chain is not enforced');
 if(findings.length){for(const finding of findings)console.error('SECURITY:',finding);process.exit(1)}
 console.log(`EINEIRO security static checks: OK (${tracked.length} files)`);
 

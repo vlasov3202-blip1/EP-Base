@@ -15,6 +15,10 @@ const b=await rt.auth.login({companyId:'api-c2',email:'owner2@test.local',passwo
 const s=await rt.auth.login({companyId:'api-c1',email:'seller1@test.local',password:'password123'});
 
 let out=await call('GET','/api/v1/products',null,null);assert.equal(out.status,401);
+out=await call('POST','/api/v1/api-keys',{name:'blocked-without-step-up',scopes:['products:read']},a.token);assert.equal(out.status,428);assert.equal(out.body.code,'REAUTH_REQUIRED');
+out=await call('POST','/api/v1/auth/reauth',{password:'wrong-password'},a.token);assert.equal(out.status,401);assert.equal(out.body.code,'REAUTH_FAILED');
+out=await call('POST','/api/v1/auth/reauth',{password:'password123'},a.token);assert.equal(out.status,200);assert.ok(out.body.validUntil);
+out=await call('POST','/api/v1/api-keys',{name:'allowed-after-step-up',scopes:['products:read']},a.token);assert.equal(out.status,201);assert.ok(out.body.apiKey.token.startsWith('ein_'));
 out=await call('POST','/api/v1/products',{id:'p1',name:'Tenant A product'},a.token);assert.equal(out.status,201);
 out=await call('POST','/api/v1/products',{id:'p1',name:'Tenant B product'},b.token);assert.equal(out.status,201);
 out=await call('GET','/api/v1/products',null,a.token);assert.equal(out.body.items.length,1);assert.equal(out.body.items[0].name,'Tenant A product');

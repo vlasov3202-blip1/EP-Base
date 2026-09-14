@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import {getPlatformRuntimeForTests} from './http-api.mjs';
-import {clientAddress,readJsonBody} from './http-security.mjs';
+import {clientAddress,enforceRateLimit,readJsonBody} from './http-security.mjs';
 
 const SESSION_COOKIE='eineiro_session';
 const CSRF_COOKIE='eineiro_csrf';
@@ -19,7 +19,7 @@ export async function handleBrowserSession(req,res){
   const url=new URL(req.url,'http://local');
   const cookies=parseCookies(req.headers.cookie||'');
   if(req.method==='POST'&&url.pathname==='/api/browser/login'){
-    try{const {auth}=await getPlatformRuntimeForTests();const p=await readJsonBody(req,{maxBytes:200_000});const out=await auth.login({...p,requestIp:clientAddress(req)});const csrf=crypto.randomBytes(24).toString('base64url');const maxAge=Math.max(1,Math.floor((Date.parse(out.session.expiresAt)-Date.now())/1000));const cookieHeaders=[serializeCookie(SESSION_COOKIE,out.token,{httpOnly:true,maxAge,secure:secureCookies()}),serializeCookie(CSRF_COOKIE,csrf,{httpOnly:false,maxAge,secure:secureCookies()})];return json(res,200,{user:out.user,companyId:out.session.companyId,role:out.session.role,csrfToken:csrf},{'Set-Cookie':cookieHeaders});}catch(e){return json(res,e.status||401,{error:e.message,code:e.code||'LOGIN_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
+    try{const {auth,rateLimiter}=await getPlatformRuntimeForTests();await enforceRateLimit(req,{scope:'browser-login',limit:Number(process.env.LOGIN_RATE_LIMIT_PER_MINUTE||20),windowMs:60_000,limiter:rateLimiter});const p=await readJsonBody(req,{maxBytes:200_000});const out=await auth.login({...p,requestIp:clientAddress(req)});const csrf=crypto.randomBytes(24).toString('base64url');const maxAge=Math.max(1,Math.floor((Date.parse(out.session.expiresAt)-Date.now())/1000));const cookieHeaders=[serializeCookie(SESSION_COOKIE,out.token,{httpOnly:true,maxAge,secure:secureCookies()}),serializeCookie(CSRF_COOKIE,csrf,{httpOnly:false,maxAge,secure:secureCookies()})];return json(res,200,{user:out.user,companyId:out.session.companyId,role:out.session.role,csrfToken:csrf},{'Set-Cookie':cookieHeaders});}catch(e){return json(res,e.status||401,{error:e.message,code:e.code||'LOGIN_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
   }
   if(req.method==='POST'&&url.pathname==='/api/browser/logout'){
     if(cookies[SESSION_COOKIE]&&!csrfOk(req,cookies))return json(res,403,{error:'csrf token required',code:'CSRF_REQUIRED'});

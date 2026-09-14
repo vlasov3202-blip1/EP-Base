@@ -29,9 +29,9 @@ export function clientAddress(req){
   return net.isIP(forwarded)?forwarded:direct;
 }
 
-export function enforceRateLimit(req,{scope,limit,windowMs,key=null,limiter=applicationRateLimiter}={}){
+export async function enforceRateLimit(req,{scope,limit,windowMs,key=null,limiter=applicationRateLimiter}={}){
   const subject=key||clientAddress(req);
-  return limiter.consume(`${scope||'request'}:${subject}`,{limit,windowMs});
+  return await limiter.consume(`${scope||'request'}:${subject}`,{limit,windowMs});
 }
 
 export async function readJsonBody(req,{maxBytes=DEFAULT_MAX_BODY_BYTES,maxDepth=DEFAULT_MAX_JSON_DEPTH,maxNodes=DEFAULT_MAX_JSON_NODES}={}){

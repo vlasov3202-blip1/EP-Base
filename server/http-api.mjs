@@ -17,7 +17,7 @@ import {OpenAiCompatibleModerationProvider} from './openai-moderation-provider.m
 import {ModerationAppealService,ModerationMonitoringService,ModerationIncidentService,ModerationRepublicationService} from './moderation-lifecycle.mjs';
 import {EncryptedFileEvidenceStorage,ModerationEvidenceService} from './moderation-evidence.mjs';
 import path from 'node:path';
-import {clientAddress,enforceRateLimit,readJsonBody} from './http-security.mjs';
+import {applicationRateLimiter,clientAddress,enforceRateLimit,readJsonBody} from './http-security.mjs';
 
 const DATA_FILE=process.env.EINEIRO_DATA_FILE||path.join(process.cwd(),'data','eineiro.json');
 const BACKUP_DIR=process.env.EINEIRO_BACKUP_DIR||path.join(process.cwd(),'backups');
@@ -25,12 +25,14 @@ let runtimePromise;
 async function runtime(){
   if(!runtimePromise)runtimePromise=(async()=>{
     const store=await createDataStore();
+    const rateLimiter=store.rateLimiter||applicationRateLimiter;
+    if(process.env.EINEIRO_DISTRIBUTED_RATE_LIMIT_REQUIRED==='true'&&!store.rateLimiter)throw Object.assign(new Error('distributed rate limit backend is required'),{code:'DISTRIBUTED_RATE_LIMIT_REQUIRED'});
     const auth=new AuthService(store);
-    const apiKeys=new ApiKeyService(store);
+    const apiKeys=new ApiKeyService(store,{limiter:rateLimiter});
     const repoFactory=ctx=>store.tenant(ctx);
     const importer=new ImportService({repoFactory});
     const moderationEvents=new EventLayer({repoFactory});
-    const moderationAudit=new AuditLogService({repoFactory});
+    const moderationAudit=new AuditLogService({repoFactory,integrityKey:process.env.EINEIRO_AUDIT_INTEGRITY_KEY||'',integrityRequired:process.env.EINEIRO_AUDIT_INTEGRITY_REQUIRED==='true'});
     const categorySchemas=new CategorySchemaService({repoFactory});
     const moderation=new ModerationService({repoFactory,events:moderationEvents,audit:moderationAudit});
     const moderationAiKey=process.env.EINEIRO_MODERATION_AI_API_KEY||process.env.OPENAI_API_KEY||'';
@@ -98,7 +100,7 @@ async function runtime(){
     });
     if(infra.backups)infra.queue.register('backup.platform',async()=>infra.backups.create({scope:'platform'}));
     infra.queue.register('backup.company',async job=>companyBackups.create(job.payload.companyId));
-    return{store,auth,apiKeys,importer,infra,companyBackups,categorySchemas,moderation,moderationAi,moderationHuman,moderationAppeals,moderationMonitoring,moderationEvidence,moderationRepublication,moderationIncidents,usesPostgres};
+    return{store,auth,apiKeys,importer,infra,companyBackups,categorySchemas,moderation,moderationAi,moderationHuman,moderationAppeals,moderationMonitoring,moderationEvidence,moderationRepublication,moderationIncidents,audit:moderationAudit,rateLimiter,usesPostgres};
   })();
   return runtimePromise;
 }
@@ -115,6 +117,7 @@ function platformAdminOnly(ctx){if(ctx.role!=='admin')throw Object.assign(new Er
 function moderationRoleOnly(ctx){if(!['owner','manager','seller','api'].includes(ctx.role))throw Object.assign(new Error('moderation access required'),{status:403,code:'FORBIDDEN'});}
 function moderationAiRoleOnly(ctx){if(!['owner','manager','api'].includes(ctx.role))throw Object.assign(new Error('moderation AI access required'),{status:403,code:'FORBIDDEN'});}
 function moderationObjectOnly(ctx,offer){if(ctx.role!=='seller')return;const sellerId=ctx.user?.sellerId||ctx.userId;if(!offer||offer.sellerId!==sellerId)throw Object.assign(new Error('offer access denied'),{status:403,code:'FORBIDDEN'});}
+function requireStepUp(rt,ctx){return rt.auth.requireRecentReauthentication(ctx,{maxAgeMs:Number(process.env.EINEIRO_REAUTH_TTL_MS||600_000)})}
 
 export async function handlePlatformApi(req,res){
   const url=new URL(req.url,'http://local');
@@ -128,16 +131,19 @@ export async function handlePlatformApi(req,res){
     try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:read'});platformAdminOnly(ctx);return finish(200,{metrics:rt.infra.metrics.snapshot(),queue:rt.infra.queue.stats()});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'METRICS_FORBIDDEN'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/auth/register'){
-    try{enforceRateLimit(req,{scope:'auth-register',limit:Number(process.env.REGISTER_RATE_LIMIT_PER_HOUR||10),windowMs:3_600_000});const p=await body(req,{maxBytes:100_000});const user=await rt.auth.registerPublic(p);return finish(201,{user});}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'REGISTER_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
+    try{await enforceRateLimit(req,{scope:'auth-register',limit:Number(process.env.REGISTER_RATE_LIMIT_PER_HOUR||10),windowMs:3_600_000,limiter:rt.rateLimiter});const p=await body(req,{maxBytes:100_000});const user=await rt.auth.registerPublic(p);return finish(201,{user});}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'REGISTER_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
   }
   if(req.method==='POST'&&url.pathname==='/api/v1/auth/invitations'){
-    try{const ctx=await authenticateRequest(req);adminOnly(ctx);const p=await body(req);const invite=await rt.auth.createInvite(ctx,p);return finish(201,invite);}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'INVITE_ERROR'})}
+    try{const ctx=await authenticateRequest(req);adminOnly(ctx);requireStepUp(rt,ctx);const p=await body(req);const invite=await rt.auth.createInvite(ctx,p);await rt.audit.write(ctx,{actor:{userId:ctx.userId,role:ctx.role},action:'role.invite',object:{type:'Invitation',id:invite.invitation.id,role:invite.invitation.role}});return finish(201,invite);}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'INVITE_ERROR'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/auth/login'){
-    try{enforceRateLimit(req,{scope:'auth-login',limit:Number(process.env.LOGIN_RATE_LIMIT_PER_MINUTE||20),windowMs:60_000});const p=await body(req,{maxBytes:100_000});const out=await rt.auth.login({...p,requestIp:clientAddress(req)});return finish(200,out);}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'LOGIN_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
+    try{await enforceRateLimit(req,{scope:'auth-login',limit:Number(process.env.LOGIN_RATE_LIMIT_PER_MINUTE||20),windowMs:60_000,limiter:rt.rateLimiter});const p=await body(req,{maxBytes:100_000});const out=await rt.auth.login({...p,requestIp:clientAddress(req)});return finish(200,out);}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'LOGIN_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
   }
   if(req.method==='POST'&&url.pathname==='/api/auth/logout'){
     try{const token=bearer(req);if(token)await rt.auth.logout(token);return finish(204,{});}catch(e){return finish(500,{error:e.message})}
+  }
+  if(req.method==='POST'&&url.pathname==='/api/v1/auth/reauth'){
+    try{await enforceRateLimit(req,{scope:'auth-reauth',limit:Number(process.env.REAUTH_RATE_LIMIT_PER_MINUTE||10),windowMs:60_000,limiter:rt.rateLimiter});const token=bearer(req);if(!token)throw Object.assign(new Error('authorization required'),{status:401,code:'AUTH_REQUIRED'});const p=await body(req,{maxBytes:20_000});const result=await rt.auth.reauthenticate(token,{password:p.password,requestIp:clientAddress(req)});const ctx=await rt.auth.authenticate(token);await rt.audit.write(ctx,{actor:{userId:ctx.userId,role:ctx.role},action:'security.reauthenticate',object:{type:'Session',id:ctx.sessionId}});return finish(200,result);}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'REAUTH_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
   }
   if(req.method==='GET'&&url.pathname==='/api/me'){
     try{const ctx=await authenticateRequest(req);return finish(200,{companyId:ctx.companyId,role:ctx.role,user:ctx.user||null,apiKeyId:ctx.apiKeyId||null,scopes:ctx.scopes||null,rateLimit:ctx.rateLimit||null});}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'AUTH_REQUIRED'})}
@@ -155,20 +161,20 @@ export async function handlePlatformApi(req,res){
     try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:write'});platformAdminOnly(ctx);const p=await body(req).catch(()=>({}));if(p.scope==='company'){if(!p.companyId)throw Object.assign(new Error('companyId required'),{status:400});const job=rt.infra.queue.enqueue(ctx,'backup.company',{companyId:p.companyId});return finish(202,{job});}if(!rt.infra.backups)return finish(501,{error:'Для PostgreSQL platform backup выполняется на уровне инфраструктуры',code:'POSTGRES_BACKUP_EXTERNAL'});const job=rt.infra.queue.enqueue(ctx,'backup.platform',{});return finish(202,{job});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'BACKUP_FORBIDDEN'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/v1/platform/backups/restore'){
-    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:write'});platformAdminOnly(ctx);if(!rt.infra.backups)return finish(501,{error:'Для PostgreSQL platform restore выполняется на уровне инфраструктуры',code:'POSTGRES_BACKUP_EXTERNAL'});const p=await body(req);if(!p.file)throw Object.assign(new Error('file required'),{status:400});const result=await rt.infra.backups.restore(p.file);return finish(200,result);}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'RESTORE_ERROR'})}
+    try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:write'});platformAdminOnly(ctx);requireStepUp(rt,ctx);if(!rt.infra.backups)return finish(501,{error:'Для PostgreSQL platform restore выполняется на уровне инфраструктуры',code:'POSTGRES_BACKUP_EXTERNAL'});const p=await body(req);if(!p.file)throw Object.assign(new Error('file required'),{status:400});const result=await rt.infra.backups.restore(p.file);await rt.audit.write(ctx,{actor:{userId:ctx.userId,role:ctx.role},action:'backup.restore',object:{type:'PlatformBackup',file:String(p.file)},result:{restoredAt:result.restoredAt}});return finish(200,result);}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'RESTORE_ERROR'})}
   }
   if(req.method==='GET'&&url.pathname==='/api/v1/company/backups'){
     try{const ctx=await authenticateRequest(req);adminOnly(ctx);return finish(200,{items:await rt.companyBackups.list(ctx.companyId)});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'COMPANY_BACKUP_FORBIDDEN'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/v1/company/backups'){
-    try{const ctx=await authenticateRequest(req);adminOnly(ctx);return finish(201,{backup:await rt.companyBackups.create(ctx.companyId)});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'COMPANY_BACKUP_ERROR'})}
+    try{const ctx=await authenticateRequest(req);adminOnly(ctx);requireStepUp(rt,ctx);const backup=await rt.companyBackups.create(ctx.companyId);await rt.audit.write(ctx,{actor:{userId:ctx.userId,role:ctx.role},action:'backup.create',object:{type:'CompanyBackup',companyId:ctx.companyId},result:{createdAt:backup.createdAt}});return finish(201,{backup});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'COMPANY_BACKUP_ERROR'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/v1/api-keys'){
-    try{const ctx=await authorize(req,{permission:'*'});adminOnly(ctx);const p=await body(req);return finish(201,{apiKey:await rt.apiKeys.create(ctx,p)});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'API_KEY_ERROR'})}
+    try{const ctx=await authorize(req,{permission:'*'});adminOnly(ctx);requireStepUp(rt,ctx);const p=await body(req);const apiKey=await rt.apiKeys.create(ctx,p);await rt.audit.write(ctx,{actor:{userId:ctx.userId,role:ctx.role},action:'api_key.create',object:{type:'ApiKey',id:apiKey.id},result:{scopes:apiKey.scopes||[]}});return finish(201,{apiKey});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'API_KEY_ERROR'})}
   }
   const keyRevoke=url.pathname.match(/^\/api\/v1\/api-keys\/([^/]+)$/);
   if(req.method==='DELETE'&&keyRevoke){
-    try{const ctx=await authorize(req,{permission:'*'});adminOnly(ctx);const ok=await rt.apiKeys.revoke(ctx,keyRevoke[1]);return finish(ok?204:404,ok?{}:{error:'not found'});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'API_KEY_ERROR'})}
+    try{const ctx=await authorize(req,{permission:'*'});adminOnly(ctx);requireStepUp(rt,ctx);const ok=await rt.apiKeys.revoke(ctx,keyRevoke[1]);if(ok)await rt.audit.write(ctx,{actor:{userId:ctx.userId,role:ctx.role},action:'api_key.revoke',object:{type:'ApiKey',id:keyRevoke[1]}});return finish(ok?204:404,ok?{}:{error:'not found'});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'API_KEY_ERROR'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/v1/import/products'){
     try{const ctx=await authorize(req,{permission:'inventory.write',scope:'products:write'});const p=await body(req,{maxBytes:8_000_000});const result=await rt.importer.importProducts(ctx,p);return finish(200,result);}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'IMPORT_ERROR'})}

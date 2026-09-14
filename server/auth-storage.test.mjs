@@ -33,6 +33,10 @@ try{
   assert.equal(ctx.companyId,'c1');
   assert.equal(ctx.role,'owner');
   assert.doesNotThrow(()=>auth.require(ctx,'finance.read'));
+  assert.throws(()=>auth.requireRecentReauthentication(ctx),error=>error.code==='REAUTH_REQUIRED'&&error.status===428);
+  await assert.rejects(()=>auth.reauthenticate(login.token,{password:'wrong-password',requestIp:'127.0.0.1'}),error=>error.code==='REAUTH_FAILED');
+  const reauth=await auth.reauthenticate(login.token,{password:'supersecret',requestIp:'127.0.0.1'});assert.ok(reauth.validUntil);
+  const steppedUp=await auth.authenticate(login.token);assert.equal(steppedUp.reauthenticatedAt,reauth.reauthenticatedAt);assert.doesNotThrow(()=>auth.requireRecentReauthentication(steppedUp));
 
   const repo1=store.tenant({companyId:'c1'}),repo2=store.tenant({companyId:'c2'});
   await repo1.put('Product',{id:'p1',name:'Tenant A'});

@@ -79,7 +79,7 @@ export class AuthService{
     this.loginFailures.delete(identityKey);
     const identityId=user.identityId||user.id;
     const token=crypto.randomBytes(32).toString('base64url');const now=this.now();
-    const session={id:tokenHash(token),companyId:user.companyId,userId:user.id,identityId,role:user.role,createdAt:new Date(now).toISOString(),expiresAt:new Date(now+this.sessionTtlMs).toISOString(),lastSeenAt:new Date(now).toISOString()};
+    const session={id:tokenHash(token),companyId:user.companyId,userId:user.id,identityId,role:user.role,createdAt:new Date(now).toISOString(),expiresAt:new Date(now+this.sessionTtlMs).toISOString(),lastSeenAt:new Date(now).toISOString(),reauthenticatedAt:null};
     await this.store.putSession(session);return {token,session:publicSession(session),user:sanitizeUser({...user,identityId})};
   }
   async authenticate(token){
@@ -91,8 +91,16 @@ export class AuthService{
     if(!user?.active)throw Object.assign(new Error('user inactive'),{code:'USER_INACTIVE'});
     if(now-Date.parse(session.lastSeenAt||session.createdAt)>=60_000){session.lastSeenAt=new Date(now).toISOString();await this.store.putSession(session);}
     const identityId=session.identityId||user.identityId||user.id;
-    return {userId:user.id,identityId,companyId:user.companyId,role:user.role,sessionId:session.id,user:sanitizeUser({...user,identityId})};
+    return {userId:user.id,identityId,companyId:user.companyId,role:user.role,sessionId:session.id,reauthenticatedAt:session.reauthenticatedAt||null,user:sanitizeUser({...user,identityId})};
   }
+  async reauthenticate(token,{password,requestIp='unknown'}={}){
+    const ctx=await this.authenticate(token);const identityKey=`reauth:${ctx.companyId}:${ctx.userId}`;const ipKey=`reauth-ip:${requestIp||'unknown'}`;
+    this.assertLoginAllowed(identityKey,this.maxIdentityFailures);this.assertLoginAllowed(ipKey,this.maxIpFailures);
+    const user=await this.store.getUser(ctx.companyId,ctx.userId);
+    if(!user?.active||!verifyPassword(password,user.passwordHash)){this.recordLoginFailure(identityKey);this.recordLoginFailure(ipKey);throw Object.assign(new Error('re-authentication failed'),{status:401,code:'REAUTH_FAILED'});}
+    this.loginFailures.delete(identityKey);const sessionKey=tokenHash(token);const session=await this.store.getSession(sessionKey);const now=this.now();session.reauthenticatedAt=new Date(now).toISOString();await this.store.putSession(session);return{reauthenticatedAt:session.reauthenticatedAt,validUntil:new Date(now+10*60*1000).toISOString()};
+  }
+  requireRecentReauthentication(ctx,{maxAgeMs=10*60*1000}={}){const at=Date.parse(ctx?.reauthenticatedAt||'');if(!Number.isFinite(at)||this.now()-at>Math.max(1,Number(maxAgeMs)||0))throw Object.assign(new Error('recent re-authentication required'),{status:428,code:'REAUTH_REQUIRED'});return ctx;}
   async logout(token){await this.store.removeSession(tokenHash(token));}
   require(ctx,permission){assertCan(ctx,permission);return ctx;}
   assertLoginAllowed(key,limit){
