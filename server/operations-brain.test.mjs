@@ -6,7 +6,7 @@ repo.put(ctx,'MarketingCampaign',{id:'m1',status:'active',spent:10000,revenue:80
 repo.put(ctx,'Lead',{id:'l1',firstResponse:8,status:'qualified'});
 repo.put(ctx,'Product',{id:'p1',name:'Товар',demand:90,stock:1});
 repo.put(ctx,'Order',{id:'o1',status:'created'});
-repo.put(ctx,'Shipment',{id:'s1',status:'in_transit',updatedAt:'2026-09-10T00:00:00Z'});
+repo.put(ctx,'Shipment',{id:'s1',status:'in_transit',trackingUpdatedAt:'2026-09-10T00:00:00Z'});
 repo.put(ctx,'FinanceEntry',{id:'f1',type:'income',amount:5000});repo.put(ctx,'FinanceEntry',{id:'f2',type:'expense',amount:9000});
 repo.put(ctx,'Task',{id:'t1',status:'failed'});repo.put(ctx,'Task',{id:'t2',status:'failed'});repo.put(ctx,'Task',{id:'t3',status:'failed'});
 const brain=new OperationsBrain({repoFactory:()=>wrap,now:()=>new Date('2026-09-13T12:00:00Z')});
