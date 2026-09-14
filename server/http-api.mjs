@@ -9,6 +9,11 @@ import {ModerationService} from './moderation.mjs';
 import {CategorySchemaService} from './category-schema.mjs';
 import {EventLayer} from './event-layer.mjs';
 import {AuditLogService} from './audit-log.mjs';
+import {AiProviderRegistry} from './ai-provider-layer.mjs';
+import {AiCostService} from './ai-costs.mjs';
+import {PrivacyGateway} from './privacy-gateway.mjs';
+import {ModerationAIOrchestrator,ModerationHumanExceptionService} from './moderation-ai.mjs';
+import {OpenAiCompatibleModerationProvider} from './openai-moderation-provider.mjs';
 import path from 'node:path';
 
 const DATA_FILE=process.env.EINEIRO_DATA_FILE||path.join(process.cwd(),'data','eineiro.json');
@@ -25,6 +30,29 @@ async function runtime(){
     const moderationAudit=new AuditLogService({repoFactory});
     const categorySchemas=new CategorySchemaService({repoFactory});
     const moderation=new ModerationService({repoFactory,events:moderationEvents,audit:moderationAudit});
+    const moderationAiKey=process.env.EINEIRO_MODERATION_AI_API_KEY||process.env.OPENAI_API_KEY||'';
+    const moderationAiRegistry=new AiProviderRegistry({repoFactory});
+    if(moderationAiKey)moderationAiRegistry.register(new OpenAiCompatibleModerationProvider({
+      apiKey:moderationAiKey,
+      baseUrl:process.env.EINEIRO_MODERATION_AI_BASE_URL||'https://api.openai.com/v1',
+      model:process.env.EINEIRO_MODERATION_AI_MODEL||'gpt-5-mini',
+      timeoutMs:Number(process.env.EINEIRO_MODERATION_AI_TIMEOUT_MS||30000)
+    }));
+    const moderationAi=new ModerationAIOrchestrator({
+      repoFactory,
+      moderation,
+      providerRegistry:moderationAiRegistry,
+      privacyGateway:new PrivacyGateway({allowExternal:Boolean(moderationAiKey)}),
+      aiCosts:new AiCostService({repoFactory}),
+      aiEnabled:envFlag('AI_MODERATION_ENABLED',Boolean(moderationAiKey)),
+      killSwitch:envFlag('MODERATION_KILL_SWITCH',false),
+      secondReviewEnabled:envFlag('SECOND_AI_REVIEW_ENABLED',true),
+      humanQueueEnabled:envFlag('HUMAN_EXCEPTION_QUEUE_ENABLED',true),
+      confidenceThreshold:Number(process.env.MODERATION_AI_CONFIDENCE_THRESHOLD||0.78),
+      highRiskThreshold:Number(process.env.MODERATION_HIGH_RISK_THRESHOLD||70),
+      region:process.env.EINEIRO_AI_REGION||null
+    });
+    const moderationHuman=new ModerationHumanExceptionService({repoFactory,audit:moderationAudit,events:moderationEvents});
     const usesPostgres=Boolean(process.env.DATABASE_URL);
     const infra=createInfrastructure({dataFile:usesPostgres?null:DATA_FILE,backupDir:BACKUP_DIR});
     const companyBackups=new CompanyBackupService({store,backupDir:path.join(BACKUP_DIR,'companies')});
@@ -34,7 +62,7 @@ async function runtime(){
     });
     if(infra.backups)infra.queue.register('backup.platform',async()=>infra.backups.create({scope:'platform'}));
     infra.queue.register('backup.company',async job=>companyBackups.create(job.payload.companyId));
-    return{store,auth,apiKeys,importer,infra,companyBackups,categorySchemas,moderation,usesPostgres};
+    return{store,auth,apiKeys,importer,infra,companyBackups,categorySchemas,moderation,moderationAi,moderationHuman,usesPostgres};
   })();
   return runtimePromise;
 }
@@ -42,12 +70,14 @@ function json(res,status,payload,headers={}){res.writeHead(status,{'Content-Type
 async function body(req,{maxBytes=1_000_000}={}){let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>maxBytes)throw Object.assign(new Error('payload too large'),{status:413});chunks.push(c)}return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}')}
 function bearer(req){const h=String(req.headers.authorization||'');return h.startsWith('Bearer ')?h.slice(7).trim():null}
 function apiKey(req){return String(req.headers['x-api-key']||'').trim()||null}
+function envFlag(name,fallback=false){const value=process.env[name];if(value==null||value==='')return Boolean(fallback);return ['1','true','yes','on'].includes(String(value).toLowerCase())}
 export async function authenticateRequest(req){const {auth,apiKeys}=await runtime();const key=apiKey(req);if(key)return apiKeys.authenticate(key);const token=bearer(req);if(!token)throw Object.assign(new Error('authorization required'),{status:401,code:'AUTH_REQUIRED'});return auth.authenticate(token)}
 function scopeFor(resource,method){const base={products:'products',orders:'orders',tasks:'tasks',messages:'messages',events:'events',audit:'audit',moderation:'moderation'}[resource];return `${base}:${method==='GET'?'read':'write'}`}
 async function authorize(req,{permission=null,scope=null}={}){const ctx=await authenticateRequest(req);if(ctx.role==='api'){const {apiKeys}=await runtime();apiKeys.requireScope(ctx,scope);return ctx}if(permission)assertCan(ctx,permission);return ctx}
 function adminOnly(ctx){if(ctx.role!=='owner'&&ctx.role!=='admin')throw Object.assign(new Error('owner/admin required'),{status:403,code:'FORBIDDEN'});}
 function platformAdminOnly(ctx){if(ctx.role!=='admin')throw Object.assign(new Error('platform admin required'),{status:403,code:'FORBIDDEN'});}
 function moderationRoleOnly(ctx){if(!['owner','manager','seller','api'].includes(ctx.role))throw Object.assign(new Error('moderation access required'),{status:403,code:'FORBIDDEN'});}
+function moderationAiRoleOnly(ctx){if(!['owner','manager','api'].includes(ctx.role))throw Object.assign(new Error('moderation AI access required'),{status:403,code:'FORBIDDEN'});}
 function moderationObjectOnly(ctx,offer){if(ctx.role!=='seller')return;const sellerId=ctx.user?.sellerId||ctx.userId;if(!offer||offer.sellerId!==sellerId)throw Object.assign(new Error('offer access denied'),{status:403,code:'FORBIDDEN'});}
 
 export async function handlePlatformApi(req,res){
@@ -119,6 +149,28 @@ export async function handlePlatformApi(req,res){
       const moderationCase=await rt.moderation.review(ctx,{offerId:p.offerId,categorySchema,force:false,trigger:p.trigger||'submission',source:p.source||'api'});
       return finish(moderationCase.reused?200:201,{moderationCase});
     }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_ERROR'})}
+  }
+  const moderationAiMatch=url.pathname.match(/^\/api\/v1\/moderation\/cases\/([^/]+)\/ai-review$/);
+  if(req.method==='POST'&&moderationAiMatch){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:write'});moderationAiRoleOnly(ctx);
+      const result=await rt.moderationAi.process(ctx,moderationAiMatch[1]);
+      return finish(result.degraded?202:200,result);
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_AI_ERROR'})}
+  }
+  if(req.method==='GET'&&url.pathname==='/api/v1/moderation/human-exceptions'){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:read'});adminOnly(ctx);
+      return finish(200,{items:await rt.moderationHuman.list(ctx,{status:url.searchParams.get('status')||'open'})});
+    }catch(e){return finish(e.status||403,{error:e.message,code:e.code||'MODERATION_HUMAN_ERROR'})}
+  }
+  const moderationHumanResolveMatch=url.pathname.match(/^\/api\/v1\/moderation\/human-exceptions\/([^/]+)\/resolve$/);
+  if(req.method==='POST'&&moderationHumanResolveMatch){
+    try{
+      const ctx=await authorize(req,{scope:'moderation:write'});adminOnly(ctx);
+      const result=await rt.moderationHuman.resolve(ctx,moderationHumanResolveMatch[1],await body(req,{maxBytes:100_000}));
+      return finish(200,result);
+    }catch(e){return finish(e.status||400,{error:e.message,code:e.code||'MODERATION_HUMAN_ERROR'})}
   }
   const moderationCaseMatch=url.pathname.match(/^\/api\/v1\/moderation\/cases\/([^/]+)$/);
   if(req.method==='GET'&&moderationCaseMatch){

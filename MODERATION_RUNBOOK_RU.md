@@ -1,0 +1,80 @@
+# Модерация EINEIRO: внешний запуск и аварийный режим
+
+## Что подключено
+
+Контур работает по схеме «алгоритмы → AI при смысловой неоднозначности → независимый второй AI → человек только при исключении».
+
+Алгоритмически безопасные карточки проходят без расходов на AI. Жёсткие нарушения отклоняются алгоритмами. AI не может отменить жёсткое правило.
+
+## Переменные окружения
+
+Минимальный набор для внешнего AI:
+
+```env
+EINEIRO_MODERATION_AI_API_KEY=replace-with-secret
+AI_MODERATION_ENABLED=true
+```
+
+Дополнительные настройки:
+
+```env
+EINEIRO_MODERATION_AI_BASE_URL=https://api.openai.com/v1
+EINEIRO_MODERATION_AI_MODEL=gpt-5-mini
+EINEIRO_MODERATION_AI_TIMEOUT_MS=30000
+EINEIRO_AI_REGION=
+MODERATION_AI_CONFIDENCE_THRESHOLD=0.78
+MODERATION_HIGH_RISK_THRESHOLD=70
+SECOND_AI_REVIEW_ENABLED=true
+HUMAN_EXCEPTION_QUEUE_ENABLED=true
+MODERATION_KILL_SWITCH=false
+```
+
+Ключ не хранится в Git и не должен попадать во frontend. Провайдер должен поддерживать OpenAI-совместимый endpoint `POST /chat/completions` и строгий JSON Schema response format.
+
+Если задан `OPENAI_API_KEY`, он используется как резервное имя переменной. Явное `EINEIRO_MODERATION_AI_API_KEY` имеет приоритет.
+
+## Запуск
+
+```bash
+npm install
+npm run check
+npm run build
+npm run dev
+```
+
+После запуска:
+
+1. Создать алгоритмический кейс: `POST /api/v1/moderation/cases`.
+2. Если решение `AI_REVIEW_REQUIRED`, запустить AI: `POST /api/v1/moderation/cases/{caseId}/ai-review`.
+3. Если получено `SECOND_AI_REVIEW`, повторить тот же запрос. Второй запрос формируется независимо.
+4. Исключения владельца: `GET /api/v1/moderation/human-exceptions`.
+5. Решение владельца: `POST /api/v1/moderation/human-exceptions/{id}/resolve`.
+
+Для API-ключей нужны scopes `moderation:read` и `moderation:write`. Ручное решение разрешено только ролям `owner` и `admin`.
+
+## Безопасная деградация
+
+При отсутствии ключа, отключённом AI, таймауте, ошибке провайдера или невалидном JSON:
+
+- карточка не публикуется;
+- кейс остаётся в `AI_REVIEW_REQUIRED` или `SECOND_AI_REVIEW`;
+- сохраняются код ошибки и отметка о возможности повтора;
+- очередь людей автоматически не заполняется;
+- алгоритмические одобрения и жёсткие отклонения продолжают работать.
+
+Аварийная остановка внешнего AI:
+
+```env
+MODERATION_KILL_SWITCH=true
+```
+
+## Проверка перед production
+
+- секрет добавлен в защищённые переменные среды;
+- endpoint провайдера доступен только серверу;
+- включён TLS;
+- настроены лимиты расходов и сетевые таймауты;
+- выполнены `npm run check` и `npm run build`;
+- проверен сценарий с отключённым провайдером;
+- назначены владельцы очереди P0/P1;
+- журналы `ModerationAiReview`, `ModerationHumanException`, `AiCost` и `UnifiedAudit` доступны для расследования.

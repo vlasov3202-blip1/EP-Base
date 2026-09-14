@@ -31,6 +31,7 @@ jobs:
           node server/search.test.mjs
           node server/product-graph.test.mjs
           node server/moderation.test.mjs
+          node server/moderation-ai.test.mjs
           node server/moderation-api.test.mjs
           node server/recovery-security.test.mjs
           node spatial-capabilities.test.mjs

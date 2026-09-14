@@ -51,8 +51,7 @@ const AI_DECISIONS=new Set([
   MODERATION_DECISIONS.AUTO_APPROVED,
   MODERATION_DECISIONS.SELLER_ACTION_REQUIRED,
   MODERATION_DECISIONS.AUTO_REJECTED,
-  MODERATION_DECISIONS.SECOND_AI_REVIEW,
-  MODERATION_DECISIONS.HUMAN_EXCEPTION
+  MODERATION_DECISIONS.QUARANTINED
 ]);
 
 const SELLER_MESSAGES=Object.freeze({
@@ -217,6 +216,7 @@ export class ModerationService{
       moderationCaseId:moderationCase.id,
       reviewNumber,
       decision,
+      proposedDecision:review.decision,
       reasonCodes:[...review.reasonCodes],
       evidenceRefs:[...review.evidenceRefs],
       confidence:review.confidence,
@@ -255,11 +255,16 @@ export class ModerationService{
     const repo=this.repoFactory(ctx);
     const moderationCase=await repo.get('ModerationCase',moderationCaseId);
     if(!moderationCase)return null;
-    const [ruleResults,aiReviews]=await Promise.all([repo.list('ModerationRuleResult'),repo.list('ModerationAiReview')]);
+    const [ruleResults,aiReviews,humanExceptions]=await Promise.all([
+      repo.list('ModerationRuleResult'),
+      repo.list('ModerationAiReview'),
+      repo.list('ModerationHumanException')
+    ]);
     return {
       ...moderationCase,
       ruleResults:ruleResults.filter(row=>row.moderationCaseId===moderationCase.id),
-      aiReviews:aiReviews.filter(row=>row.moderationCaseId===moderationCase.id)
+      aiReviews:aiReviews.filter(row=>row.moderationCaseId===moderationCase.id),
+      humanExceptions:humanExceptions.filter(row=>row.moderationCaseId===moderationCase.id)
     };
   }
 
