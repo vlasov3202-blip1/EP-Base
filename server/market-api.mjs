@@ -4,6 +4,7 @@ import {createCatalogSource} from './catalog.mjs';
 import {createServices} from './core.mjs';
 import {getPlatformRuntimeForTests} from './http-api.mjs';
 import {clientAddress,enforceRateLimit,readJsonBody} from './http-security.mjs';
+import {recordMarketMoreEvent} from './market-more.mjs';
 
 const PUBLIC_MARKET_CTX={userId:'public-market',companyId:'eineiro-market',role:'owner'};
 const {events,audit}=createServices();
@@ -18,6 +19,18 @@ export async function handleMarketApi(request,response){
   const url=new URL(request.url,'http://local');
   if(request.method==='GET'&&url.pathname==='/api/market/showcase'){
     try{return json(response,200,{items:await marketplaceShowcase()});}catch(error){return json(response,500,{error:error.message,code:'SHOWCASE_ERROR'});}
+  }
+  if(request.method==='POST'&&url.pathname==='/api/market/events'){
+    try{
+      if(request.headers['x-eineiro-market-event']!=='1')throw Object.assign(new Error('market event origin proof required'),{status:403,code:'MARKET_EVENT_ORIGIN_REQUIRED'});
+      const {store,rateLimiter}=await getPlatformRuntimeForTests();
+      await enforceRateLimit(request,{scope:'market-flight-recorder',key:clientAddress(request),limit:Number(process.env.MARKET_EVENT_RATE_LIMIT_PER_MINUTE||90),windowMs:60_000,limiter:rateLimiter});
+      await enforceRateLimit(request,{scope:'market-flight-recorder-day',key:clientAddress(request),limit:Number(process.env.MARKET_EVENT_RATE_LIMIT_PER_DAY||2000),windowMs:86_400_000,limiter:rateLimiter});
+      await enforceRateLimit(request,{scope:'market-flight-recorder-global',key:'global',limit:Number(process.env.MARKET_EVENT_GLOBAL_RATE_LIMIT_PER_MINUTE||3000),windowMs:60_000,limiter:rateLimiter});
+      const input=await readJson(request,{maxBytes:20_000,maxDepth:4,maxNodes:80});
+      const event=await recordMarketMoreEvent({store,ctx:PUBLIC_MARKET_CTX,input});
+      return json(response,202,{accepted:true,eventId:event.id});
+    }catch(error){return json(response,error.status||400,{error:error.message,code:error.code||'MARKET_EVENT_ERROR',retryAfterMs:error.retryAfterMs||undefined});}
   }
   if(request.method==='POST'&&url.pathname==='/api/vision/resolve'){
     try{
