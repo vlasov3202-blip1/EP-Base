@@ -17,10 +17,10 @@ try{
     companyId:'victim-company',userId:'root',identityId:'root-identity',role:'admin',
     email:'founder@example.com',password:'founder-secret',name:'Founder'
   });
-  assert.notEqual(publicUser.companyId,'victim-company');
+  assert.equal(publicUser.companyId,null);
   assert.notEqual(publicUser.id,'root');
   assert.notEqual(publicUser.identityId,'root-identity');
-  assert.equal(publicUser.role,'owner');
+  assert.equal(publicUser.role,'buyer');
   assert.equal('passwordHash' in publicUser,false);
 
   await auth.register({companyId:'c1',userId:'owner-1',identityId:'identity-owner',email:'owner@example.com',password:'owner-secret',role:'owner'});

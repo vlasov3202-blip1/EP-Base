@@ -1,4 +1,5 @@
 import {AuthService} from './auth.mjs';
+import {createAuthNotifierFromEnv} from './auth-notifier.mjs';
 import {assertCan} from './core.mjs';
 import {ApiKeyService} from './api-keys.mjs';
 import {ImportService} from './importer.mjs';
@@ -27,7 +28,7 @@ async function runtime(){
     const store=await createDataStore();
     const rateLimiter=store.rateLimiter||applicationRateLimiter;
     if(process.env.EINEIRO_DISTRIBUTED_RATE_LIMIT_REQUIRED==='true'&&!store.rateLimiter)throw Object.assign(new Error('distributed rate limit backend is required'),{code:'DISTRIBUTED_RATE_LIMIT_REQUIRED'});
-    const auth=new AuthService(store);
+    const auth=new AuthService(store,{notifier:createAuthNotifierFromEnv()});
     const apiKeys=new ApiKeyService(store,{limiter:rateLimiter});
     const repoFactory=ctx=>store.tenant(ctx);
     const importer=new ImportService({repoFactory});
@@ -142,11 +143,33 @@ export async function handlePlatformApi(req,res){
   if(req.method==='POST'&&url.pathname==='/api/auth/logout'){
     try{const token=bearer(req);if(token)await rt.auth.logout(token);return finish(204,{});}catch(e){return finish(500,{error:e.message})}
   }
+  if(req.method==='POST'&&url.pathname==='/api/v1/auth/email/verification'){
+    try{await enforceRateLimit(req,{scope:'auth-email-verification',limit:5,windowMs:3_600_000,limiter:rt.rateLimiter});const p=await body(req,{maxBytes:20_000});return finish(202,await rt.auth.requestEmailVerification(p));}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'EMAIL_VERIFICATION_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
+  }
+  if(req.method==='POST'&&url.pathname==='/api/v1/auth/email/verify'){
+    try{const p=await body(req,{maxBytes:20_000});return finish(200,{user:await rt.auth.verifyEmail(p.token)});}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'EMAIL_VERIFY_ERROR'})}
+  }
+  if(req.method==='POST'&&url.pathname==='/api/v1/auth/password/reset'){
+    try{await enforceRateLimit(req,{scope:'auth-password-reset',limit:5,windowMs:3_600_000,limiter:rt.rateLimiter});const p=await body(req,{maxBytes:20_000});return finish(202,await rt.auth.requestPasswordReset(p));}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'PASSWORD_RESET_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
+  }
+  if(req.method==='POST'&&url.pathname==='/api/v1/auth/password/reset/confirm'){
+    try{const p=await body(req,{maxBytes:20_000});return finish(200,await rt.auth.resetPassword(p));}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'PASSWORD_RESET_ERROR'})}
+  }
   if(req.method==='POST'&&url.pathname==='/api/v1/auth/reauth'){
     try{await enforceRateLimit(req,{scope:'auth-reauth',limit:Number(process.env.REAUTH_RATE_LIMIT_PER_MINUTE||10),windowMs:60_000,limiter:rt.rateLimiter});const token=bearer(req);if(!token)throw Object.assign(new Error('authorization required'),{status:401,code:'AUTH_REQUIRED'});const p=await body(req,{maxBytes:20_000});const result=await rt.auth.reauthenticate(token,{password:p.password,requestIp:clientAddress(req)});const ctx=await rt.auth.authenticate(token);await rt.audit.write(ctx,{actor:{userId:ctx.userId,role:ctx.role},action:'security.reauthenticate',object:{type:'Session',id:ctx.sessionId}});return finish(200,result);}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'REAUTH_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
   }
   if(req.method==='GET'&&url.pathname==='/api/me'){
-    try{const ctx=await authenticateRequest(req);return finish(200,{companyId:ctx.companyId,role:ctx.role,user:ctx.user||null,apiKeyId:ctx.apiKeyId||null,scopes:ctx.scopes||null,rateLimit:ctx.rateLimit||null});}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'AUTH_REQUIRED'})}
+    try{const ctx=await authenticateRequest(req);const memberships=ctx.identityId?await rt.auth.membershipsForIdentity(ctx.identityId):[];return finish(200,{identityId:ctx.identityId||null,companyId:ctx.companyId,role:ctx.role,user:ctx.user||null,memberships,activeContext:ctx.companyId?{companyId:ctx.companyId,role:ctx.role}:null,apiKeyId:ctx.apiKeyId||null,scopes:ctx.scopes||null,rateLimit:ctx.rateLimit||null});}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'AUTH_REQUIRED'})}
+  }
+  if(req.method==='GET'&&url.pathname==='/api/v1/auth/sessions'){
+    try{const ctx=await authenticateRequest(req);return finish(200,{items:await rt.auth.listSessions(ctx.identityId)});}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'AUTH_REQUIRED'})}
+  }
+  const authSessionMatch=url.pathname.match(/^\/api\/v1\/auth\/sessions\/([^/]+)$/);
+  if(req.method==='DELETE'&&authSessionMatch){
+    try{const ctx=await authenticateRequest(req);const result=await rt.auth.revokeSession(ctx.identityId,authSessionMatch[1]);return finish(200,result);}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'SESSION_REVOKE_ERROR'})}
+  }
+  if(req.method==='POST'&&url.pathname==='/api/v1/auth/sessions/revoke-all'){
+    try{const ctx=await authenticateRequest(req);requireStepUp(rt,ctx);return finish(200,await rt.auth.revokeAllSessions(ctx.identityId));}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'SESSION_REVOKE_ERROR'})}
   }
   if(req.method==='GET'&&url.pathname==='/api/v1/platform/queue'){
     try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:read'});platformAdminOnly(ctx);return finish(200,{stats:rt.infra.queue.stats(),items:rt.infra.queue.list(ctx)});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'QUEUE_FORBIDDEN'})}

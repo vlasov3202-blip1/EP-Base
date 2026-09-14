@@ -14,7 +14,8 @@ assert.ok(migrationPool.calls.some(x=>x.sql.includes('CREATE TABLE IF NOT EXISTS
 assert.ok(migrationPool.calls.some(x=>x.sql.includes('CREATE TABLE IF NOT EXISTS eineiro_rate_limits')));
 assert.ok(migrationPool.calls.some(x=>x.sql.includes('ENABLE ROW LEVEL SECURITY')));
 assert.ok(migrationPool.calls.some(x=>x.sql.includes('CREATE POLICY eineiro_tenant_records')));
-assert.equal(POSTGRES_SCHEMA_VERSION,2);
+assert.ok(migrationPool.calls.some(x=>x.sql.includes('CREATE TABLE IF NOT EXISTS eineiro_auth_accounts')));
+assert.equal(POSTGRES_SCHEMA_VERSION,3);
 assert.ok(migrationPool.calls.some(x=>x.sql.startsWith('INSERT INTO eineiro_schema_migrations')));
 assert.equal(migrationPool.calls.at(-1).sql,'COMMIT');
 

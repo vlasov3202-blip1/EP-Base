@@ -1,7 +1,7 @@
 import {tenantKey} from './core.mjs';
 import {PostgresFixedWindowRateLimiter} from './distributed-rate-limit.mjs';
 
-export const POSTGRES_SCHEMA_VERSION=2;
+export const POSTGRES_SCHEMA_VERSION=3;
 
 const MIGRATIONS=[{
   version:1,
@@ -87,6 +87,36 @@ CREATE POLICY eineiro_tenant_events ON eineiro_events
   USING (company_id = current_setting('eineiro.company_id',true))
   WITH CHECK (company_id = current_setting('eineiro.company_id',true));
 `
+},{
+  version:3,
+  sql:`
+CREATE TABLE IF NOT EXISTS eineiro_identities (
+  identity_id text PRIMARY KEY,
+  data jsonb NOT NULL
+);
+CREATE TABLE IF NOT EXISTS eineiro_auth_accounts (
+  identity_id text PRIMARY KEY REFERENCES eineiro_identities(identity_id),
+  email text NOT NULL UNIQUE,
+  data jsonb NOT NULL
+);
+CREATE TABLE IF NOT EXISTS eineiro_auth_challenges (
+  challenge_id text PRIMARY KEY,
+  identity_id text NOT NULL REFERENCES eineiro_identities(identity_id),
+  type text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  data jsonb NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_eineiro_auth_challenges_identity ON eineiro_auth_challenges(identity_id,type);
+CREATE TABLE IF NOT EXISTS eineiro_auth_events (
+  id bigserial PRIMARY KEY,
+  identity_id text,
+  type text NOT NULL,
+  data jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_eineiro_auth_events_identity ON eineiro_auth_events(identity_id,id);
+ALTER TABLE eineiro_sessions ALTER COLUMN company_id DROP NOT NULL;
+`
 }];
 
 export async function migratePostgres(pool){
@@ -106,9 +136,20 @@ export class PostgresStore{
   async putUser(user){await this.pool.query(`INSERT INTO eineiro_users(company_id,user_id,email,data) VALUES($1,$2,$3,$4::jsonb) ON CONFLICT(company_id,user_id) DO UPDATE SET email=EXCLUDED.email,data=EXCLUDED.data`,[user.companyId,user.id,user.email,JSON.stringify(user)]);return structuredClone(user);}
   async getUser(companyId,userId){const r=await this.pool.query('SELECT data FROM eineiro_users WHERE company_id=$1 AND user_id=$2',[companyId,userId]);return r.rows[0]?.data||null;}
   async findUserByEmail(companyId,email){const r=await this.pool.query('SELECT data FROM eineiro_users WHERE company_id=$1 AND email=$2',[companyId,String(email).trim().toLowerCase()]);return r.rows[0]?.data||null;}
+  async putIdentity(identity){await this.pool.query('INSERT INTO eineiro_identities(identity_id,data) VALUES($1,$2::jsonb) ON CONFLICT(identity_id) DO UPDATE SET data=EXCLUDED.data',[identity.id,JSON.stringify(identity)]);return structuredClone(identity);}
+  async getIdentity(identityId){const r=await this.pool.query('SELECT data FROM eineiro_identities WHERE identity_id=$1',[identityId]);return r.rows[0]?.data||null;}
+  async putAuthAccount(account){try{await this.pool.query('INSERT INTO eineiro_auth_accounts(identity_id,email,data) VALUES($1,$2,$3::jsonb) ON CONFLICT(identity_id) DO UPDATE SET email=EXCLUDED.email,data=EXCLUDED.data',[account.identityId,account.email,JSON.stringify(account)]);return structuredClone(account);}catch(error){if(error?.code==='23505')throw Object.assign(new Error('email exists'),{status:409,code:'EMAIL_EXISTS'});throw error;}}
+  async getAuthAccount(identityId){const r=await this.pool.query('SELECT data FROM eineiro_auth_accounts WHERE identity_id=$1',[identityId]);return r.rows[0]?.data||null;}
+  async findAuthAccountByEmail(email){const r=await this.pool.query('SELECT data FROM eineiro_auth_accounts WHERE email=$1',[String(email).trim().toLowerCase()]);return r.rows[0]?.data||null;}
+  async putAuthChallenge(challenge){await this.pool.query('INSERT INTO eineiro_auth_challenges(challenge_id,identity_id,type,expires_at,data) VALUES($1,$2,$3,$4,$5::jsonb) ON CONFLICT(challenge_id) DO UPDATE SET expires_at=EXCLUDED.expires_at,data=EXCLUDED.data',[challenge.id,challenge.identityId,challenge.type,challenge.expiresAt,JSON.stringify(challenge)]);return structuredClone(challenge);}
+  async getAuthChallenge(id){const r=await this.pool.query('SELECT data FROM eineiro_auth_challenges WHERE challenge_id=$1',[id]);return r.rows[0]?.data||null;}
+  async claimAuthChallenge(id,type,now){const usedAt=new Date(now).toISOString();const r=await this.pool.query("UPDATE eineiro_auth_challenges SET data=jsonb_set(jsonb_set(data,'{status}','\"consuming\"'::jsonb),'{usedAt}',to_jsonb($3::text)) WHERE challenge_id=$1 AND type=$2 AND data->>'status'='pending' AND expires_at>$3::timestamptz RETURNING data",[id,type,usedAt]);return r.rows[0]?.data||null;}
+  async appendAuthEvent(event){await this.pool.query('INSERT INTO eineiro_auth_events(identity_id,type,data) VALUES($1,$2,$3::jsonb)',[event.identityId||null,event.type,JSON.stringify(event)]);}
+  async listAuthEvents(identityId){return (await this.pool.query('SELECT data FROM eineiro_auth_events WHERE identity_id=$1 ORDER BY id',[identityId])).rows.map(r=>r.data);}
   async putSession(session){await this.pool.query(`INSERT INTO eineiro_sessions(session_id,company_id,user_id,expires_at,data) VALUES($1,$2,$3,$4,$5::jsonb) ON CONFLICT(session_id) DO UPDATE SET expires_at=EXCLUDED.expires_at,data=EXCLUDED.data`,[session.id,session.companyId,session.userId,session.expiresAt,JSON.stringify(session)]);return structuredClone(session);}
   async getSession(id){const r=await this.pool.query('SELECT data FROM eineiro_sessions WHERE session_id=$1',[id]);return r.rows[0]?.data||null;}
   async removeSession(id){await this.pool.query('DELETE FROM eineiro_sessions WHERE session_id=$1',[id]);}
+  async listSessionsByIdentity(identityId){return (await this.pool.query("SELECT data FROM eineiro_sessions WHERE data->>'identityId'=$1 ORDER BY expires_at DESC",[identityId])).rows.map(r=>r.data);}
   async appendAudit(event){await this.pool.query('INSERT INTO eineiro_audit(company_id,data) VALUES($1,$2::jsonb)',[event.companyId,JSON.stringify(event)]);}
   async listAudit(companyId){return (await this.pool.query('SELECT data FROM eineiro_audit WHERE company_id=$1 ORDER BY id',[companyId])).rows.map(r=>r.data);}
   async appendEvent(event){await this.pool.query('INSERT INTO eineiro_events(company_id,data) VALUES($1,$2::jsonb)',[event.companyId,JSON.stringify(event)]);}
