@@ -1,9 +1,10 @@
 import {authenticateRequest,getPlatformRuntimeForTests} from './http-api.mjs';
+import {readJsonBody} from './http-security.mjs';
 import {ChannelConfigService} from './channel-config.mjs';
 import {checkChannelConnection} from './live-channels.mjs';
 
 function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(status===204?'':JSON.stringify(payload));}
-async function body(req,{maxBytes=500_000}={}){let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>maxBytes)throw Object.assign(new Error('payload too large'),{status:413});chunks.push(c)}return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}')}
+const body=readJsonBody;
 function ownerOnly(ctx){if(ctx.role!=='owner'&&ctx.role!=='admin')throw Object.assign(new Error('owner/admin required'),{status:403,code:'FORBIDDEN'});}
 
 export async function handleChannelApi(req,res){

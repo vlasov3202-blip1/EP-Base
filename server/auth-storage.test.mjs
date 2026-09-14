@@ -3,7 +3,7 @@ import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {JsonFileStore,CURRENT_SCHEMA_VERSION,migrateDatabase} from './storage.mjs';
-import {AuthService,hashPassword,verifyPassword} from './auth.mjs';
+import {AuthService,hashPassword,tokenHash,verifyPassword} from './auth.mjs';
 
 const dir=await mkdtemp(path.join(os.tmpdir(),'eineiro-'));
 const file=path.join(dir,'db.json');
@@ -26,6 +26,9 @@ try{
 
   const login=await auth.login({companyId:'c1',email:'owner@example.com',password:'supersecret'});
   assert.ok(login.token.length>20);
+  assert.equal(store.getSession(login.token),null);
+  assert.ok(store.getSession(tokenHash(login.token)));
+  assert.equal('id' in login.session,false);
   const ctx=await auth.authenticate(login.token);
   assert.equal(ctx.companyId,'c1');
   assert.equal(ctx.role,'owner');
@@ -45,6 +48,12 @@ try{
 
   await auth.logout(login.token);
   await assert.rejects(()=>auth.authenticate(login.token),/invalid session/);
+
+  let now=1000;const protectedAuth=new AuthService(store,{now:()=>now,maxIdentityFailures:2,maxIpFailures:10,loginWindowMs:1000});
+  await assert.rejects(()=>protectedAuth.login({companyId:'c1',email:'owner@example.com',password:'wrong-one',requestIp:'127.0.0.1'}),/invalid credentials/);
+  await assert.rejects(()=>protectedAuth.login({companyId:'c1',email:'owner@example.com',password:'wrong-two',requestIp:'127.0.0.1'}),/invalid credentials/);
+  await assert.rejects(()=>protectedAuth.login({companyId:'c1',email:'owner@example.com',password:'supersecret',requestIp:'127.0.0.1'}),error=>error.code==='LOGIN_RATE_LIMITED'&&error.status===429);
+  now=2001;assert.ok((await protectedAuth.login({companyId:'c1',email:'owner@example.com',password:'supersecret',requestIp:'127.0.0.1'})).token);
 
   console.log('EINEIRO auth/storage tests: OK');
 } finally {

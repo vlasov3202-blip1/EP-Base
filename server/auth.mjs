@@ -19,10 +19,12 @@ export function verifyPassword(password,record){
   return expected.length===candidate.length&&crypto.timingSafeEqual(expected,candidate);
 }
 function opaqueId(prefix){return `${prefix}_${crypto.randomUUID().replaceAll('-','')}`;}
-function tokenHash(token){return crypto.createHash('sha256').update(String(token||'')).digest('hex');}
+export function tokenHash(token){return crypto.createHash('sha256').update(String(token||'')).digest('hex');}
 
 export class AuthService{
-  constructor(store,{sessionTtlMs=1000*60*60*24*14}={}){this.store=store;this.sessionTtlMs=sessionTtlMs;}
+  constructor(store,{sessionTtlMs=1000*60*60*8,sessionIdleTtlMs=1000*60*30,loginWindowMs=1000*60*15,maxIdentityFailures=5,maxIpFailures=30,now=()=>Date.now()}={}){
+    this.store=store;this.sessionTtlMs=sessionTtlMs;this.sessionIdleTtlMs=sessionIdleTtlMs;this.loginWindowMs=loginWindowMs;this.maxIdentityFailures=maxIdentityFailures;this.maxIpFailures=maxIpFailures;this.now=now;this.loginFailures=new Map();
+  }
 
   // Trusted/internal registration for migrations, fixtures and controlled server flows.
   async register({companyId,userId,email,password,role='seller',name='',identityId=null}){
@@ -66,24 +68,39 @@ export class AuthService{
     return this.register({companyId,userId:opaqueId('usr'),identityId:opaqueId('idn'),email:normalized,password,role:'owner',name});
   }
 
-  async login({companyId,email,password}){
-    const user=await this.store.findUserByEmail(companyId,normalizeEmail(email));
-    if(!user||!user.active||!verifyPassword(password,user.passwordHash))throw Object.assign(new Error('invalid credentials'),{code:'INVALID_CREDENTIALS'});
+  async login({companyId,email,password,requestIp='unknown'}){
+    const normalized=normalizeEmail(email);const identityKey=`identity:${companyId||'-'}:${normalized}`;const ipKey=`ip:${requestIp||'unknown'}`;
+    this.assertLoginAllowed(identityKey,this.maxIdentityFailures);this.assertLoginAllowed(ipKey,this.maxIpFailures);
+    const user=await this.store.findUserByEmail(companyId,normalized);
+    if(!user||!user.active||!verifyPassword(password,user.passwordHash)){
+      this.recordLoginFailure(identityKey);this.recordLoginFailure(ipKey);
+      throw Object.assign(new Error('invalid credentials'),{status:401,code:'INVALID_CREDENTIALS'});
+    }
+    this.loginFailures.delete(identityKey);
     const identityId=user.identityId||user.id;
-    const session={id:crypto.randomBytes(32).toString('base64url'),companyId:user.companyId,userId:user.id,identityId,role:user.role,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+this.sessionTtlMs).toISOString(),lastSeenAt:new Date().toISOString()};
-    await this.store.putSession(session);return {token:session.id,session:structuredClone(session),user:sanitizeUser({...user,identityId})};
+    const token=crypto.randomBytes(32).toString('base64url');const now=this.now();
+    const session={id:tokenHash(token),companyId:user.companyId,userId:user.id,identityId,role:user.role,createdAt:new Date(now).toISOString(),expiresAt:new Date(now+this.sessionTtlMs).toISOString(),lastSeenAt:new Date(now).toISOString()};
+    await this.store.putSession(session);return {token,session:publicSession(session),user:sanitizeUser({...user,identityId})};
   }
   async authenticate(token){
-    const session=await this.store.getSession(String(token||''));
+    const sessionKey=tokenHash(token);const session=await this.store.getSession(sessionKey);
     if(!session)throw Object.assign(new Error('invalid session'),{code:'AUTH_REQUIRED'});
-    if(Date.parse(session.expiresAt)<=Date.now()){await this.store.removeSession(session.id);throw Object.assign(new Error('session expired'),{code:'SESSION_EXPIRED'});}
+    const now=this.now();
+    if(Date.parse(session.expiresAt)<=now||Date.parse(session.lastSeenAt||session.createdAt)+this.sessionIdleTtlMs<=now){await this.store.removeSession(sessionKey);throw Object.assign(new Error('session expired'),{code:'SESSION_EXPIRED'});}
     const user=await this.store.getUser(session.companyId,session.userId);
     if(!user?.active)throw Object.assign(new Error('user inactive'),{code:'USER_INACTIVE'});
+    if(now-Date.parse(session.lastSeenAt||session.createdAt)>=60_000){session.lastSeenAt=new Date(now).toISOString();await this.store.putSession(session);}
     const identityId=session.identityId||user.identityId||user.id;
     return {userId:user.id,identityId,companyId:user.companyId,role:user.role,sessionId:session.id,user:sanitizeUser({...user,identityId})};
   }
-  async logout(token){await this.store.removeSession(String(token||''));}
+  async logout(token){await this.store.removeSession(tokenHash(token));}
   require(ctx,permission){assertCan(ctx,permission);return ctx;}
+  assertLoginAllowed(key,limit){
+    const now=this.now();const attempts=(this.loginFailures.get(key)||[]).filter(at=>now-at<this.loginWindowMs);this.loginFailures.set(key,attempts);
+    if(attempts.length>=limit)throw Object.assign(new Error('too many login attempts'),{status:429,code:'LOGIN_RATE_LIMITED',retryAfterMs:Math.max(1,this.loginWindowMs-(now-attempts[0]))});
+  }
+  recordLoginFailure(key){const now=this.now();const attempts=(this.loginFailures.get(key)||[]).filter(at=>now-at<this.loginWindowMs);attempts.push(now);this.loginFailures.set(key,attempts);}
 }
 
 export function sanitizeUser(user){const {passwordHash,...safe}=user;return structuredClone(safe);}
+function publicSession(session){const {id,...safe}=session;return structuredClone(safe);}

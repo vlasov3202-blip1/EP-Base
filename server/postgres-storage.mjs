@@ -99,7 +99,12 @@ export class PostgresTenantRepository{
 export async function createPostgresStore(connectionString=process.env.DATABASE_URL){
   if(!connectionString)throw new Error('DATABASE_URL required');
   const {Pool}=await import('pg');
-  const pool=new Pool({connectionString,max:Number(process.env.DATABASE_POOL_MAX||20),ssl:process.env.DATABASE_SSL==='true'?{rejectUnauthorized:false}:undefined});
+  const ssl=process.env.DATABASE_SSL==='true'?{
+    rejectUnauthorized:true,
+    ...(process.env.DATABASE_SSL_CA?{ca:process.env.DATABASE_SSL_CA.replaceAll('\\n','\n')}:{})
+  }:undefined;
+  if(process.env.NODE_ENV==='production'&&process.env.DATABASE_SSL!=='true')throw Object.assign(new Error('verified database TLS is required in production'),{code:'DATABASE_TLS_REQUIRED'});
+  const pool=new Pool({connectionString,max:Number(process.env.DATABASE_POOL_MAX||20),ssl,connectionTimeoutMillis:Number(process.env.DATABASE_CONNECT_TIMEOUT_MS||10_000),statement_timeout:Number(process.env.DATABASE_STATEMENT_TIMEOUT_MS||30_000)});
   const store=await new PostgresStore(pool).init();store.close=()=>pool.end();return store;
 }
 

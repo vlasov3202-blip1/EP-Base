@@ -17,6 +17,7 @@ import {OpenAiCompatibleModerationProvider} from './openai-moderation-provider.m
 import {ModerationAppealService,ModerationMonitoringService,ModerationIncidentService,ModerationRepublicationService} from './moderation-lifecycle.mjs';
 import {EncryptedFileEvidenceStorage,ModerationEvidenceService} from './moderation-evidence.mjs';
 import path from 'node:path';
+import {clientAddress,enforceRateLimit,readJsonBody} from './http-security.mjs';
 
 const DATA_FILE=process.env.EINEIRO_DATA_FILE||path.join(process.cwd(),'data','eineiro.json');
 const BACKUP_DIR=process.env.EINEIRO_BACKUP_DIR||path.join(process.cwd(),'backups');
@@ -102,7 +103,7 @@ async function runtime(){
   return runtimePromise;
 }
 function json(res,status,payload,headers={}){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',...headers});res.end(status===204?'':JSON.stringify(payload));}
-async function body(req,{maxBytes=1_000_000}={}){let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>maxBytes)throw Object.assign(new Error('payload too large'),{status:413});chunks.push(c)}return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}')}
+const body=readJsonBody;
 function bearer(req){const h=String(req.headers.authorization||'');return h.startsWith('Bearer ')?h.slice(7).trim():null}
 function apiKey(req){return String(req.headers['x-api-key']||'').trim()||null}
 function envFlag(name,fallback=false){const value=process.env[name];if(value==null||value==='')return Boolean(fallback);return ['1','true','yes','on'].includes(String(value).toLowerCase())}
@@ -127,13 +128,13 @@ export async function handlePlatformApi(req,res){
     try{const ctx=await authorize(req,{permission:'platform.*',scope:'platform:read'});platformAdminOnly(ctx);return finish(200,{metrics:rt.infra.metrics.snapshot(),queue:rt.infra.queue.stats()});}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'METRICS_FORBIDDEN'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/auth/register'){
-    try{const p=await body(req);const user=await rt.auth.registerPublic(p);return finish(201,{user});}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'REGISTER_ERROR'})}
+    try{enforceRateLimit(req,{scope:'auth-register',limit:Number(process.env.REGISTER_RATE_LIMIT_PER_HOUR||10),windowMs:3_600_000});const p=await body(req,{maxBytes:100_000});const user=await rt.auth.registerPublic(p);return finish(201,{user});}catch(e){return finish(e.status||400,{error:e.message,code:e.code||'REGISTER_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
   }
   if(req.method==='POST'&&url.pathname==='/api/v1/auth/invitations'){
     try{const ctx=await authenticateRequest(req);adminOnly(ctx);const p=await body(req);const invite=await rt.auth.createInvite(ctx,p);return finish(201,invite);}catch(e){return finish(e.status||403,{error:e.message,code:e.code||'INVITE_ERROR'})}
   }
   if(req.method==='POST'&&url.pathname==='/api/auth/login'){
-    try{const p=await body(req);const out=await rt.auth.login(p);return finish(200,out);}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'LOGIN_ERROR'})}
+    try{enforceRateLimit(req,{scope:'auth-login',limit:Number(process.env.LOGIN_RATE_LIMIT_PER_MINUTE||20),windowMs:60_000});const p=await body(req,{maxBytes:100_000});const out=await rt.auth.login({...p,requestIp:clientAddress(req)});return finish(200,out);}catch(e){return finish(e.status||401,{error:e.message,code:e.code||'LOGIN_ERROR',retryAfterMs:e.retryAfterMs||undefined})}
   }
   if(req.method==='POST'&&url.pathname==='/api/auth/logout'){
     try{const token=bearer(req);if(token)await rt.auth.logout(token);return finish(204,{});}catch(e){return finish(500,{error:e.message})}

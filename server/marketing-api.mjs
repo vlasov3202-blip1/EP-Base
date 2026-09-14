@@ -1,10 +1,11 @@
 import {authenticateRequest,getPlatformRuntimeForTests} from './http-api.mjs';
+import {readJsonBody} from './http-security.mjs';
 import {MarketingAutopilotService} from './marketing-autopilot.mjs';
 import {MarketingPublisherRegistry,EineiroMarketMarketingPublisher} from './marketing-publishers.mjs';
 import {CreativeFactory,createRuleBasedCopyGenerator} from './creative-factory.mjs';
 
 function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(payload));}
-async function body(req){const chunks=[];for await(const c of req)chunks.push(c);return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}')}
+const body=req=>readJsonBody(req,{maxBytes:500_000});
 function canManage(ctx){if(!['owner','manager','admin'].includes(ctx.role))throw Object.assign(new Error('marketing access required'),{status:403,code:'FORBIDDEN'});}
 async function service(ctx){
   const {store}=await getPlatformRuntimeForTests();

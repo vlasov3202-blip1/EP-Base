@@ -2,10 +2,11 @@ import {authenticateRequest,getPlatformRuntimeForTests} from './http-api.mjs';
 import {ObservabilityService} from './observability.mjs';
 import {DisasterRecoveryService} from './disaster-recovery.mjs';
 import {CapabilityAccessService} from './security-hardening.mjs';
+import {readJsonBody} from './http-security.mjs';
 
 function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(payload));}
 function requireAdmin(ctx){if(ctx.role!=='admin')throw Object.assign(new Error('platform admin required'),{status:403,code:'FORBIDDEN'});}
-async function body(req,{maxBytes=250000}={}){let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>maxBytes)throw Object.assign(new Error('payload too large'),{status:413});chunks.push(c)}return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}')}
+const body=readJsonBody;
 
 async function collect(store){
   const companyIds=await store.listCompanyIds();const out={companies:[],market:{products:0,offers:0,orders:0,unservedDemand:0},ai:{decisions:0,executed:0,requiresApproval:0,costUnits:0},autonomy:{executedActions:0,humanDecisions:0,score:100},integrations:{connections:0,errors:0},moderation:{total:0,open:0,blocked:0,aiWaiting:0,humanExceptions:0,appealsOpen:0,quarantined:0,incidentsOpen:0,recentExceptions:[],recentAppeals:[],recentIncidents:[],evidenceFiles:0,republications:0},experiments:{tests:0,running:0},featureFlags:{total:0,enabled:0},audit:{events:0},categories:new Map()};
