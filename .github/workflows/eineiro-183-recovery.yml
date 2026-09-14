@@ -35,6 +35,9 @@ jobs:
           node server/recovery-security.test.mjs
           node spatial-capabilities.test.mjs
 
+      - name: Full application checks
+        run: npm run check
+
       - name: Build complete recovery runtime
         run: npm run build
 
