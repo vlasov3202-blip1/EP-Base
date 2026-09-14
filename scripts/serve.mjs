@@ -13,6 +13,7 @@ import { handleAdminApi } from '../server/admin-api.mjs';
 import { handleControlPlaneApi } from '../server/control-plane-api.mjs';
 import { handleBusinessApi } from '../server/business-api.mjs';
 import { startBackgroundRuntime } from '../server/background-runtime.mjs';
+import { installSecurityHeaders, rejectOversizedDeclaredBody } from '../server/http-security.mjs';
 
 const port = Number(process.env.EP_BASE_PORT || 4173);
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' };
@@ -33,6 +34,9 @@ function publicFileFromRequest(requestUrl = '/') {
 
 createServer(async (request, response) => {
   try {
+    installSecurityHeaders(request, response);
+    if (rejectOversizedDeclaredBody(request, response)) return;
+    request.setTimeout?.(Number(process.env.EINEIRO_HTTP_REQUEST_TIMEOUT_MS || 30_000));
     if (request.url?.startsWith('/api/')) {
       const browserHandled = await handleBrowserSession(request, response);
       if (browserHandled !== false) return;

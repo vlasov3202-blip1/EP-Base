@@ -1,12 +1,13 @@
 import crypto from 'node:crypto';
 import {createHash} from 'node:crypto';
 import {authenticateRequest,getPlatformRuntimeForTests} from './http-api.mjs';
+import {readJsonBody} from './http-security.mjs';
 import {ChannelConfigService} from './channel-config.mjs';
 import {createLiveChannelAdapter} from './live-channels.mjs';
 
 const hash=v=>createHash('sha256').update(String(v)).digest('hex');
 function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(payload));}
-async function body(req,{maxBytes=300_000}={}){let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>maxBytes)throw Object.assign(new Error('payload too large'),{status:413});chunks.push(c)}return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}')}
+const body=readJsonBody;
 function assertInboxRole(ctx){if(!['owner','manager','seller','admin'].includes(ctx.role))throw Object.assign(new Error('inbox access forbidden'),{status:403,code:'FORBIDDEN'});}
 
 function groupConversations(inbound,outbound){

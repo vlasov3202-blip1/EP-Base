@@ -4,16 +4,21 @@ on:
   push:
     branches:
       - restore/eineiro-183
+      - feature/algorithm-first-moderation-p0
   workflow_dispatch:
 
 jobs:
   recovery-smoke:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
 
       - name: Syntax sweep
         run: |
@@ -29,8 +34,25 @@ jobs:
           node server/control-plane-health.test.mjs
           node server/search.test.mjs
           node server/product-graph.test.mjs
+          node server/moderation.test.mjs
+          node server/moderation-ai.test.mjs
+          node server/moderation-lifecycle.test.mjs
+          node server/moderation-evidence.test.mjs
+          node server/moderation-evidence-api.test.mjs
+          node server/moderation-api.test.mjs
           node server/recovery-security.test.mjs
+          node server/http-security.test.mjs
+          node server/business-api.test.mjs
+          node server/market-api-security.test.mjs
           node spatial-capabilities.test.mjs
+
+      - name: Security policy checks
+        run: |
+          npm run security:check
+          npm audit --omit=dev --audit-level=high
+
+      - name: Full application checks
+        run: npm run check
 
       - name: Build complete recovery runtime
         run: npm run build
@@ -68,6 +90,8 @@ jobs:
           curl -fsS http://127.0.0.1:4183/market.js >/dev/null
           curl -fsS http://127.0.0.1:4183/eineiro-business.js >/dev/null
           curl -fsS http://127.0.0.1:4183/admin.js >/dev/null
+          curl -fsSI http://127.0.0.1:4183/ | grep -qi '^x-frame-options: DENY'
+          curl -fsSI http://127.0.0.1:4183/ | grep -qi '^content-security-policy:'
           code=$(curl -sS -o /tmp/control-plane.json -w '%{http_code}' http://127.0.0.1:4183/api/v1/control-plane)
           test "$code" = "401"
 
@@ -89,6 +113,13 @@ jobs:
           code=$(curl -sS -o /tmp/platform-owner.json -w '%{http_code}' http://127.0.0.1:4183/api/v1/platform/queue -H "Authorization: Bearer $TOKEN")
           test "$code" = "403"
           code=$(curl -sS -o /tmp/company-backup.json -w '%{http_code}' -X POST http://127.0.0.1:4183/api/v1/company/backups -H "Authorization: Bearer $TOKEN")
+          test "$code" = "428"
+          code=$(curl -sS -o /tmp/reauth.json -w '%{http_code}' -X POST http://127.0.0.1:4183/api/v1/auth/reauth \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer $TOKEN" \
+            --data '{"password":"ci-owner-secret"}')
+          test "$code" = "200"
+          code=$(curl -sS -o /tmp/company-backup.json -w '%{http_code}' -X POST http://127.0.0.1:4183/api/v1/company/backups -H "Authorization: Bearer $TOKEN")
           test "$code" = "201"
           cat /tmp/eineiro-183.log
 
@@ -97,7 +128,7 @@ jobs:
           tar --exclude=.git --exclude=dist --exclude=data --exclude=backups -czf /tmp/eineiro-183-source.tar.gz .
           tar -czf /tmp/eineiro-183-runtime.tar.gz dist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: eineiro-183-recovery-bundle
           path: |

@@ -2,8 +2,8 @@ import {mkdir,readFile,rename,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {tenantKey} from './core.mjs';
 
-export const CURRENT_SCHEMA_VERSION=2;
-export const migrations=[{version:1,up(db){db.meta={...(db.meta||{}),schemaVersion:1,createdAt:db.meta?.createdAt||new Date().toISOString()};db.records=db.records||{};return db;}},{version:2,up(db){db.meta.schemaVersion=2;db.sessions=db.sessions||{};db.users=db.users||{};db.audit=db.audit||[];db.events=db.events||[];return db;}}];
+export const CURRENT_SCHEMA_VERSION=3;
+export const migrations=[{version:1,up(db){db.meta={...(db.meta||{}),schemaVersion:1,createdAt:db.meta?.createdAt||new Date().toISOString()};db.records=db.records||{};return db;}},{version:2,up(db){db.meta.schemaVersion=2;db.sessions=db.sessions||{};db.users=db.users||{};db.audit=db.audit||[];db.events=db.events||[];return db;}},{version:3,up(db){db.meta.schemaVersion=3;db.identities=db.identities||{};db.authAccounts=db.authAccounts||{};db.authChallenges=db.authChallenges||{};db.authEvents=db.authEvents||[];return db;}}];
 export function migrateDatabase(input={}){let db=structuredClone(input||{});const from=Number(db.meta?.schemaVersion||0);for(const migration of migrations.filter(m=>m.version>from).sort((a,b)=>a.version-b.version))db=migration.up(db);return db;}
 
 export class JsonFileStore{
@@ -14,16 +14,27 @@ export class JsonFileStore{
   async putUser(user){if(!user?.id||!user?.companyId)throw new Error('user id/companyId required');this.db.users[`${user.companyId}:${user.id}`]=structuredClone(user);await this.flush();return structuredClone(user);}
   getUser(companyId,userId){const user=this.db.users[`${companyId}:${userId}`];return user?structuredClone(user):null;}
   findUserByEmail(companyId,email){const normalized=String(email).trim().toLowerCase();const user=Object.values(this.db.users).find(u=>u.companyId===companyId&&u.email===normalized);return user?structuredClone(user):null;}
+  async putIdentity(identity){if(!identity?.id)throw new Error('identity id required');this.db.identities[identity.id]=structuredClone(identity);await this.flush();return structuredClone(identity);}
+  getIdentity(identityId){const value=this.db.identities[identityId];return value?structuredClone(value):null;}
+  async putAuthAccount(account){if(!account?.identityId||!account?.email)throw new Error('identityId/email required');const duplicate=Object.values(this.db.authAccounts).find(x=>x.email===account.email&&x.identityId!==account.identityId);if(duplicate)throw Object.assign(new Error('email exists'),{status:409,code:'EMAIL_EXISTS'});this.db.authAccounts[account.identityId]=structuredClone(account);await this.flush();return structuredClone(account);}
+  getAuthAccount(identityId){const value=this.db.authAccounts[identityId];return value?structuredClone(value):null;}
+  findAuthAccountByEmail(email){const normalized=String(email).trim().toLowerCase();const value=Object.values(this.db.authAccounts).find(x=>x.email===normalized);return value?structuredClone(value):null;}
+  async putAuthChallenge(challenge){if(!challenge?.id)throw new Error('challenge id required');this.db.authChallenges[challenge.id]=structuredClone(challenge);await this.flush();return structuredClone(challenge);}
+  getAuthChallenge(id){const value=this.db.authChallenges[id];return value?structuredClone(value):null;}
+  async claimAuthChallenge(id,type,now){const value=this.db.authChallenges[id];if(!value||value.type!==type||value.status!=='pending'||Date.parse(value.expiresAt)<=now)return null;const claimed={...value,status:'consuming',usedAt:new Date(now).toISOString()};this.db.authChallenges[id]=claimed;await this.flush();return structuredClone(claimed);}
+  async appendAuthEvent(event){this.db.authEvents.push(structuredClone(event));await this.flush();}
+  listAuthEvents(identityId){return this.db.authEvents.filter(x=>x.identityId===identityId).map(value=>structuredClone(value));}
   async putSession(session){this.db.sessions[session.id]=structuredClone(session);await this.flush();return structuredClone(session);}
   getSession(id){const s=this.db.sessions[id];return s?structuredClone(s):null;}
   async removeSession(id){delete this.db.sessions[id];await this.flush();}
+  listSessionsByIdentity(identityId){return Object.values(this.db.sessions).filter(x=>x.identityId===identityId).map(value=>structuredClone(value));}
   async appendAudit(event){this.db.audit.push(structuredClone(event));await this.flush();}
   listAudit(companyId){return this.db.audit.filter(x=>x.companyId===companyId).map(value=>structuredClone(value));}
   async appendEvent(event){this.db.events.push(structuredClone(event));await this.flush();}
   listEvents(companyId){return this.db.events.filter(x=>x.companyId===companyId).map(value=>structuredClone(value));}
   listAllApiKeys(){return Object.values(this.db.records||{}).filter(x=>x&&x.hash&&x.companyId&&x.id).map(value=>structuredClone(value));}
   listCompanyIds(){const ids=new Set();for(const u of Object.values(this.db.users||{}))if(u?.companyId)ids.add(u.companyId);for(const r of Object.values(this.db.records||{}))if(r?.companyId)ids.add(r.companyId);return [...ids].sort();}
-  exportCompany(companyId){const records=Object.values(this.db.records||{}).filter(x=>x?.companyId===companyId).map(value=>structuredClone(value));const users=Object.values(this.db.users||{}).filter(x=>x?.companyId===companyId).map(value=>structuredClone(value));return {companyId,users,records,audit:this.listAudit(companyId),events:this.listEvents(companyId),exportedAt:new Date().toISOString()};}
+  exportCompany(companyId){const prefix=companyId+':';const records=Object.entries(this.db.records||{}).filter(([key,value])=>key.startsWith(prefix)&&value?.companyId===companyId).map(([key,value])=>{const suffix=key.slice(prefix.length);const split=suffix.indexOf(':');return{...structuredClone(value),__entity:split>=0?suffix.slice(0,split):null,__recordId:split>=0?suffix.slice(split+1):value.id}});const users=Object.values(this.db.users||{}).filter(x=>x?.companyId===companyId).map(value=>structuredClone(value));return {companyId,users,records,audit:this.listAudit(companyId),events:this.listEvents(companyId),exportedAt:new Date().toISOString()};}
 }
 
 export class DurableTenantRepository{
@@ -32,4 +43,17 @@ export class DurableTenantRepository{
   get(entity,id){const value=this.store.db.records[tenantKey(this.companyId,entity,id)];return value?structuredClone(value):null;}
   list(entity){const prefix=`${this.companyId}:${entity}:`;return Object.entries(this.store.db.records).filter(([k])=>k.startsWith(prefix)).map(([,v])=>structuredClone(v));}
   async remove(entity,id){delete this.store.db.records[tenantKey(this.companyId,entity,id)];await this.store.flush();}
+}
+
+
+// Compatibility facade for services that still receive a context-aware repository.
+// New code should prefer store.tenant(ctx) and DurableTenantRepository directly.
+export class DurableStore extends JsonFileStore{}
+
+export class DurableRepository{
+  constructor(store){if(!store)throw new Error('store required');this.store=store;}
+  put(ctx,entity,record){return this.store.tenant(ctx).put(entity,record);}
+  get(ctx,entity,id){return this.store.tenant(ctx).get(entity,id);}
+  list(ctx,entity){return this.store.tenant(ctx).list(entity);}
+  remove(ctx,entity,id){return this.store.tenant(ctx).remove(entity,id);}
 }

@@ -2,6 +2,7 @@ import path from 'node:path';
 import {authenticateRequest,getPlatformRuntimeForTests} from './http-api.mjs';
 import {DurableJobQueue} from './durable-queue.mjs';
 import {PostgresBackupService} from './postgres-backup.mjs';
+import {readJsonBody} from './http-security.mjs';
 
 let servicesPromise;
 async function services(){
@@ -15,7 +16,7 @@ async function services(){
   return servicesPromise;
 }
 function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(status===204?'':JSON.stringify(payload));}
-async function body(req){const chunks=[];for await(const c of req)chunks.push(c);return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}');}
+const body=req=>readJsonBody(req,{maxBytes:100_000});
 function adminOnly(ctx){if(ctx.role!=='owner'&&ctx.role!=='admin')throw Object.assign(new Error('owner/admin required'),{status:403,code:'FORBIDDEN'});}
 
 export async function handleReliabilityApi(req,res){

@@ -4,7 +4,7 @@ function hashKey(raw){return crypto.createHash('sha256').update(String(raw)).dig
 function now(){return Date.now()}
 
 export class ApiKeyService{
-  constructor(store,{windowMs=60_000,defaultLimit=120}={}){this.store=store;this.windowMs=windowMs;this.defaultLimit=defaultLimit;this.buckets=new Map()}
+  constructor(store,{windowMs=60_000,defaultLimit=120,limiter=null}={}){this.store=store;this.windowMs=windowMs;this.defaultLimit=defaultLimit;this.limiter=limiter;this.buckets=new Map()}
   async create(ctx,{name='integration',scopes=[],rateLimit=this.defaultLimit}={}){
     if(!ctx?.companyId||!ctx?.userId)throw new Error('authenticated context required');
     const raw=`ein_${crypto.randomBytes(24).toString('base64url')}`;
@@ -20,11 +20,11 @@ export class ApiKeyService{
     const rec=keys.find(x=>x?.hash===digest&&x.revokedAt==null);
     if(!rec)throw Object.assign(new Error('invalid api key'),{status:401,code:'INVALID_API_KEY'});
     const ctx={userId:`api:${rec.id}`,companyId:rec.companyId,role:'api',apiKeyId:rec.id,scopes:rec.scopes||[]};
-    this.consume(rec,ctx);
+    await this.consume(rec,ctx);
     rec.lastUsedAt=new Date().toISOString();
     await this.store.tenant(ctx).put('ApiKey',rec);
     return ctx;
   }
-  consume(rec,ctx){const key=`${rec.companyId}:${rec.id}`;const t=now();let b=this.buckets.get(key);if(!b||t-b.startedAt>=this.windowMs)b={startedAt:t,count:0};b.count++;this.buckets.set(key,b);const limit=Number(rec.rateLimit)||this.defaultLimit;if(b.count>limit)throw Object.assign(new Error('rate limit exceeded'),{status:429,code:'RATE_LIMITED',retryAfterMs:this.windowMs-(t-b.startedAt)});ctx.rateLimit={limit,remaining:Math.max(0,limit-b.count),resetAt:b.startedAt+this.windowMs}}
+  async consume(rec,ctx){const key=`api-key:${rec.companyId}:${rec.id}`;const limit=Number(rec.rateLimit)||this.defaultLimit;if(this.limiter){ctx.rateLimit=await this.limiter.consume(key,{limit,windowMs:this.windowMs});return ctx.rateLimit}const t=now();let b=this.buckets.get(key);if(!b||t-b.startedAt>=this.windowMs)b={startedAt:t,count:0};b.count++;this.buckets.set(key,b);if(b.count>limit)throw Object.assign(new Error('rate limit exceeded'),{status:429,code:'RATE_LIMITED',retryAfterMs:this.windowMs-(t-b.startedAt)});ctx.rateLimit={limit,remaining:Math.max(0,limit-b.count),resetAt:b.startedAt+this.windowMs};return ctx.rateLimit}
   requireScope(ctx,scope){const scopes=ctx?.scopes||[];if(!scopes.includes('*')&&!scopes.includes(scope))throw Object.assign(new Error(`missing scope:${scope}`),{status:403,code:'SCOPE_FORBIDDEN'});return ctx}
 }

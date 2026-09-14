@@ -3,7 +3,7 @@ import {SpatialFoundationService} from './spatial-foundation.mjs';
 import {SpatialReconstructionProvider,SpatialReconstructionRouter} from './spatial-reconstruction.mjs';
 import {DisagreementService} from './returns-disagreements.mjs';
 
-class Repo{constructor(){this.m=new Map()}async put(t,x){if(!this.m.has(t))this.m.set(t,new Map());this.m.get(t).set(x.id,structuredClone(x));return x}async list(t){return [...(this.m.get(t)?.values()||[])].map(structuredClone)}async get(t,id){return this.m.get(t)?.get(id)||null}}
+class Repo{constructor(){this.m=new Map()}async put(t,x){if(!this.m.has(t))this.m.set(t,new Map());this.m.get(t).set(x.id,structuredClone(x));return x}async list(t){return [...(this.m.get(t)?.values()||[])].map(value=>structuredClone(value))}async get(t,id){return this.m.get(t)?.get(id)||null}}
 const repo=new Repo();const service=new SpatialFoundationService({repoFactory:()=>repo});const ctx={companyId:'c1'};
 await repo.put('Order',{id:'o1'});
 

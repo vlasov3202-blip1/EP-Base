@@ -16,5 +16,6 @@ for (const file of frontendFiles) {
 await cp('server', 'dist/server', { recursive: true });
 await cp('scripts/serve.mjs', 'dist/scripts/serve.mjs');
 await cp('package.json', 'dist/package.json');
+await cp('package-lock.json', 'dist/package-lock.json');
 
 console.log(`EINEIRO: собраны ${frontendFiles.length} frontend-файлов + server runtime в dist/`);

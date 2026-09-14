@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {CapabilityAccessService,SecurityControlService} from './security-hardening.mjs';
 
-class Repo{constructor(){this.m=new Map()}async put(t,x){if(!this.m.has(t))this.m.set(t,new Map());this.m.get(t).set(x.id,structuredClone(x));return x}async get(t,id){return this.m.get(t)?.get(id)||null}async list(t){return [...(this.m.get(t)?.values()||[])].map(structuredClone)}}
+class Repo{constructor(){this.m=new Map()}async put(t,x){if(!this.m.has(t))this.m.set(t,new Map());this.m.get(t).set(x.id,structuredClone(x));return x}async get(t,id){return this.m.get(t)?.get(id)||null}async list(t){return [...(this.m.get(t)?.values()||[])].map(value=>structuredClone(value))}}
 const repo=new Repo();const ctx={companyId:'c1',identityId:'i1',role:'seller'};
 await repo.put('CompanyMembership',{id:'membership:i1:c1:seller',identityId:'i1',companyId:'c1',role:'seller',capabilities:['sales.read'],status:'active'});
 const access=new CapabilityAccessService({repoFactory:()=>repo,roleCapabilities:{seller:['orders.read']}});

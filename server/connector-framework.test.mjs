@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {ConnectorRegistry,ConnectorRuntime,ConnectorError} from './connector-framework.mjs';
 import {bridgeChannelAdapter} from './connector-bridges.mjs';
 
-class Repo{constructor(){this.m=new Map()}async put(t,x){if(!this.m.has(t))this.m.set(t,new Map());this.m.get(t).set(x.id,structuredClone(x));return x}async list(t){return [...(this.m.get(t)?.values()||[])].map(structuredClone)}}
+class Repo{constructor(){this.m=new Map()}async put(t,x){if(!this.m.has(t))this.m.set(t,new Map());this.m.get(t).set(x.id,structuredClone(x));return x}async list(t){return [...(this.m.get(t)?.values()||[])].map(value=>structuredClone(value))}}
 const repo=new Repo();const ctx={companyId:'c1'};
 
 {

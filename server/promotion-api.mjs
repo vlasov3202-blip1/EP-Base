@@ -1,9 +1,10 @@
 import {authenticateRequest,getPlatformRuntimeForTests} from './http-api.mjs';
+import {readJsonBody} from './http-security.mjs';
 import {ProductPromotionScoreService} from './product-promotion-score.mjs';
 
 function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(payload));}
 function canManage(ctx){if(!['owner','manager','admin'].includes(ctx.role))throw Object.assign(new Error('promotion access required'),{status:403,code:'FORBIDDEN'});}
-async function body(req){const chunks=[];for await(const c of req)chunks.push(c);return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}')}
+const body=req=>readJsonBody(req,{maxBytes:300_000});
 
 export async function handlePromotionApi(req,res){
  const url=new URL(req.url,'http://local');if(!url.pathname.startsWith('/api/v1/promotion'))return false;
