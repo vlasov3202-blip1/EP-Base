@@ -68,10 +68,11 @@ async function runtime(){
       enabled:envFlag('POST_PUBLICATION_MONITORING_ENABLED',true)
     });
     const moderationEvidenceKey=process.env.EINEIRO_MODERATION_EVIDENCE_KEY||'';
+    const moderationEvidenceDir=process.env.EINEIRO_MODERATION_EVIDENCE_DIR||path.join(process.cwd(),'data','moderation-evidence');
     const moderationEvidence=new ModerationEvidenceService({
       repoFactory,
       storage:moderationEvidenceKey?new EncryptedFileEvidenceStorage({
-        rootDir:process.env.EINEIRO_MODERATION_EVIDENCE_DIR||path.join(process.cwd(),'data','moderation-evidence'),
+        rootDir:moderationEvidenceDir,
         key:moderationEvidenceKey
       }):null,
       audit:moderationAudit,
@@ -89,7 +90,7 @@ async function runtime(){
     });
     const usesPostgres=Boolean(process.env.DATABASE_URL);
     const infra=createInfrastructure({dataFile:usesPostgres?null:DATA_FILE,backupDir:BACKUP_DIR});
-    const companyBackups=new CompanyBackupService({store,backupDir:path.join(BACKUP_DIR,'companies')});
+    const companyBackups=new CompanyBackupService({store,backupDir:path.join(BACKUP_DIR,'companies'),evidenceDir:moderationEvidenceDir});
     infra.health.register('storage',async()=>{
       if(usesPostgres){await store.pool.query('SELECT 1');return{status:'ok',type:'postgresql'};}
       return{status:store.db?'ok':'down',type:'file',schemaVersion:store.db?.meta?.schemaVersion||null};
