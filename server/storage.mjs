@@ -33,3 +33,16 @@ export class DurableTenantRepository{
   list(entity){const prefix=`${this.companyId}:${entity}:`;return Object.entries(this.store.db.records).filter(([k])=>k.startsWith(prefix)).map(([,v])=>structuredClone(v));}
   async remove(entity,id){delete this.store.db.records[tenantKey(this.companyId,entity,id)];await this.store.flush();}
 }
+
+
+// Compatibility facade for services that still receive a context-aware repository.
+// New code should prefer store.tenant(ctx) and DurableTenantRepository directly.
+export class DurableStore extends JsonFileStore{}
+
+export class DurableRepository{
+  constructor(store){if(!store)throw new Error('store required');this.store=store;}
+  put(ctx,entity,record){return this.store.tenant(ctx).put(entity,record);}
+  get(ctx,entity,id){return this.store.tenant(ctx).get(entity,id);}
+  list(ctx,entity){return this.store.tenant(ctx).list(entity);}
+  remove(ctx,entity,id){return this.store.tenant(ctx).remove(entity,id);}
+}
