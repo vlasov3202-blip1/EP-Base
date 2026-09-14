@@ -109,3 +109,103 @@ export class ConnectorRegistry {
   get(name) { return this.#connectors.get(name) || null; }
   list() { return [...this.#connectors.keys()]; }
 }
+
+
+// Context-aware inbox used by connector runtime and the durable repository facade.
+export class InboxService{
+  constructor({repo,audit=null,events=null,clock=()=>Date.now(),maxAttempts=4,baseBackoffMs=1000}={}){
+    if(!repo)throw new Error('repo required');
+    this.repo=repo;
+    this.audit=audit;
+    this.events=events;
+    this.clock=clock;
+    this.maxAttempts=maxAttempts;
+    this.baseBackoffMs=baseBackoffMs;
+  }
+
+  async ingestInbound(ctx,input={}){
+    const externalMessageId=String(input.externalMessageId||'');
+    const externalConversationId=String(input.externalConversationId||input.conversationId||'');
+    if(!externalMessageId||!externalConversationId)throw new Error('external ids required');
+    const dedupKey=hash((input.channel||'unknown')+':'+externalMessageId);
+    const existing=(await this.repo.list(ctx,'InboxMessage')).find(row=>row.dedupKey===dedupKey);
+    if(existing)return{duplicate:true,message:existing};
+    const message={
+      id:'message_'+crypto.randomUUID(),
+      channel:input.channel,
+      externalMessageId,
+      externalConversationId,
+      direction:input.direction||'in',
+      senderId:input.senderId||null,
+      text:String(input.text||''),
+      attachments:structuredClone(input.attachments||[]),
+      occurredAt:input.occurredAt||new Date(this.clock()).toISOString(),
+      dedupKey,
+      status:'received',
+      createdAt:new Date(this.clock()).toISOString()
+    };
+    const saved=await this.repo.put(ctx,'InboxMessage',message);
+    this.events?.emit(ctx,'inbox.message.received',{messageId:saved.id,channel:saved.channel});
+    this.audit?.write(ctx,{action:'inbox.ingest',entity:'InboxMessage',entityId:saved.id,meta:{channel:saved.channel}});
+    return{duplicate:false,message:saved};
+  }
+
+  listMessages(ctx){
+    return this.repo.list(ctx,'InboxMessage');
+  }
+
+  async queueOutbound(ctx,{channel,conversationId=null,externalConversationId=null,text='',attachments=[],clientRequestId}={}){
+    if(!clientRequestId)throw new Error('clientRequestId required for anti-double-send');
+    const idempotencyKey=hash(ctx.companyId+':'+channel+':'+clientRequestId);
+    const existing=(await this.repo.list(ctx,'OutboundMessage')).find(row=>row.idempotencyKey===idempotencyKey);
+    if(existing)return existing;
+    const timestamp=new Date(this.clock()).toISOString();
+    const message={
+      id:'outbound_'+crypto.randomUUID(),
+      channel,
+      externalConversationId:externalConversationId||conversationId,
+      text:String(text),
+      attachments:structuredClone(attachments),
+      clientRequestId,
+      idempotencyKey,
+      status:'queued',
+      attempts:0,
+      nextAttemptAt:timestamp,
+      createdAt:timestamp
+    };
+    const saved=await this.repo.put(ctx,'OutboundMessage',message);
+    this.events?.emit(ctx,'inbox.outbound.queued',{messageId:saved.id,channel});
+    return saved;
+  }
+
+  async listDueOutbound(ctx,{now=this.clock(),limit=50}={}){
+    return (await this.repo.list(ctx,'OutboundMessage'))
+      .filter(row=>['queued','retry'].includes(row.status)&&Date.parse(row.nextAttemptAt||0)<=Number(now))
+      .sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)))
+      .slice(0,Math.max(1,Math.min(500,Number(limit)||50)));
+  }
+
+  async markSent(ctx,id,{externalMessageId=null,sentAt=null}={}){
+    const current=await this.repo.get(ctx,'OutboundMessage',id);
+    if(!current)throw new Error('outbound message not found');
+    const next={...current,status:'sent',attempts:Number(current.attempts||0)+1,externalMessageId,sentAt:sentAt||new Date(this.clock()).toISOString(),lastError:null};
+    await this.repo.put(ctx,'OutboundMessage',next);
+    return next;
+  }
+
+  async markFailed(ctx,id,{error,retryable=true,now=this.clock()}={}){
+    const current=await this.repo.get(ctx,'OutboundMessage',id);
+    if(!current)throw new Error('outbound message not found');
+    const attempts=Number(current.attempts||0)+1;
+    const terminal=!retryable||attempts>=this.maxAttempts;
+    const next={
+      ...current,
+      status:terminal?'failed':'retry',
+      attempts,
+      lastError:String(error||'delivery failed'),
+      nextAttemptAt:new Date(Number(now)+this.baseBackoffMs*(2**Math.max(0,attempts-1))).toISOString()
+    };
+    await this.repo.put(ctx,'OutboundMessage',next);
+    return next;
+  }
+}
