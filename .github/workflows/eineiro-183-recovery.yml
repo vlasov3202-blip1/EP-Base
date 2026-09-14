@@ -113,6 +113,13 @@ jobs:
           code=$(curl -sS -o /tmp/platform-owner.json -w '%{http_code}' http://127.0.0.1:4183/api/v1/platform/queue -H "Authorization: Bearer $TOKEN")
           test "$code" = "403"
           code=$(curl -sS -o /tmp/company-backup.json -w '%{http_code}' -X POST http://127.0.0.1:4183/api/v1/company/backups -H "Authorization: Bearer $TOKEN")
+          test "$code" = "428"
+          code=$(curl -sS -o /tmp/reauth.json -w '%{http_code}' -X POST http://127.0.0.1:4183/api/v1/auth/reauth \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer $TOKEN" \
+            --data '{"password":"ci-owner-secret"}')
+          test "$code" = "200"
+          code=$(curl -sS -o /tmp/company-backup.json -w '%{http_code}' -X POST http://127.0.0.1:4183/api/v1/company/backups -H "Authorization: Bearer $TOKEN")
           test "$code" = "201"
           cat /tmp/eineiro-183.log
 
