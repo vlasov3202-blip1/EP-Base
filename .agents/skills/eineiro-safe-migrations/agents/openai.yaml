@@ -1,0 +1,4 @@
+interface:
+  display_name: "EINEIRO Safe Migrations"
+  short_description: "Plan and verify isolated migrations, restoration and rollback"
+  default_prompt: "Use $eineiro-safe-migrations for the current EINEIRO storage change. Verify the authorized scope and target before any database access."

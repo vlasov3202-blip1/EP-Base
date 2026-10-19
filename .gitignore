@@ -5,3 +5,12 @@ data/
 backups/
 *.db.json
 *.db.json.tmp
+__pycache__/
+*.py[cod]
+.playwright-cli/
+
+# Pinned Impeccable resources are source files, not application runtime data.
+!/.agents/skills/impeccable/scripts/data/
+/.agents/skills/impeccable/scripts/data/*
+!/.agents/skills/impeccable/scripts/data/font-index.json
+!/.agents/skills/impeccable/scripts/data/font-index-failures.json

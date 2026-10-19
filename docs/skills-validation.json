@@ -1,0 +1,98 @@
+{
+  "date": "2026-10-19",
+  "status": "LOCAL_CHECKS_PASS_WITH_CLIENT_LIMITATIONS",
+  "local_skill_count": 33,
+  "skill_file_count": 253,
+  "shared_file_count": 20,
+  "checks": [
+    "33 SKILL.md files have unique registered names, valid YAML and descriptions within 1024 characters; agent YAML parses.",
+    "All 19 newly vendored upstream skill directories and licenses match the pinned source bytes.",
+    "Existing design and Spec Kit manifests still match all 135 pinned files.",
+    "New Python helpers and upstream debugging shell helper parse without executing their operational actions.",
+    "Project documentation and migration skill local references resolve.",
+    "Only the five expected existing guidance/ignore files changed; application, lockfile, prior skills and prior constitution are intact.",
+    "git diff --check passes."
+  ],
+  "changed_existing_files": [
+    ".gitignore",
+    "README.md",
+    "AGENTS.md",
+    "docs/SPEC_KIT.md",
+    "docs/SKILL_RECOMMENDATIONS.md"
+  ],
+  "native_discovery": {
+    "status": "BLOCKED_BY_ENVIRONMENT",
+    "codex_version": "0.159.2",
+    "methods_attempted": [
+      "app-server skills/list",
+      "debug prompt-input"
+    ],
+    "reason": "Read-only service profile: installation_id creation fails before the skill loader; HOME/CODEX_HOME and profile not modified."
+  },
+  "codex_security": "installation-confirmed-completion-pending",
+  "live_operations": false,
+  "committed": false,
+  "published": false,
+  "registry_tests": {
+    "passed": 10,
+    "failed": 0,
+    "red_green": "Nine negative cases failed against an empty validation implementation; all ten pass after implementation."
+  },
+  "application_checks": {
+    "syntax_passed": 172,
+    "syntax_total": 172,
+    "test_files_passed": 55,
+    "test_files_total": 55,
+    "frontend": "PASS",
+    "exit_code": 0,
+    "log": "/workspace/setup-reports/eineiro-skills-app-check.log"
+  },
+  "playwright": {
+    "status": "PASS",
+    "cli_version": "0.1.22",
+    "scope": "Temporary local HTTP fixture and isolated named Chromium session",
+    "checks": [
+      "Browser opened",
+      "Rendered fixture title",
+      "Role locator clicked button",
+      "DOM reported clicked"
+    ],
+    "external_accounts_accessed": false
+  },
+  "synthetic_migration": {
+    "date": "2026-10-19",
+    "scope": "New synthetic JSON fixture only; no live DB, existing backup, credentials or external service used",
+    "checks": [
+      "Backup checksum and actual full JSON restoration match the original.",
+      "Migration v1 -> v2 preserves records, users, sessions, audit, events, tenant boundaries and colon-containing IDs; repeat is idempotent.",
+      "Rollback into a separate target restores the exact pre-migration state; source remains unchanged."
+    ],
+    "pause_resume": {
+      "status": "NOT_APPLICABLE",
+      "reason": "No application, queue or external writer was started or paused."
+    },
+    "not_verified": [
+      "Real PostgreSQL transactions and restoration",
+      "Live migrations",
+      "Operational pause/resume controls",
+      "External providers"
+    ],
+    "status": "PASS"
+  },
+  "sentry": {
+    "check": "--help and Python syntax",
+    "status": "PASS",
+    "api_called": false,
+    "credentials_read_or_configured": false
+  },
+  "pending": [
+    "Codex Security installation completion and active runtime version are not confirmed by the client.",
+    "Native agent discovery could not run because Codex service profile is read-only; structural discovery is verified separately."
+  ],
+  "local_only": [
+    "Repository skill files, registry, documentation and validation helpers are uncommitted.",
+    "Playwright CLI 0.1.22 is installed under /workspace/.tools/playwright, outside application runtime dependencies.",
+    "Reports are local; no push, PR, publication or live migration occurred."
+  ],
+  "report_scope": "Historical installation checks in the earlier uncommitted working tree. Current connection/persistence checks are in docs/skills-connection-validation.json; application changes are excluded from the skills commit."
+}

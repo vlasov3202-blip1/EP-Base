@@ -1,0 +1,7 @@
+# Preserve pinned upstream bytes, including original CRLF and whitespace.
+.agents/skills/** -text -whitespace
+.specify/** -text
+
+# Project-authored guidance uses normal text and whitespace checks.
+.agents/skills/eineiro-safe-migrations/** text eol=lf whitespace
+.specify/memory/constitution.md text eol=lf whitespace

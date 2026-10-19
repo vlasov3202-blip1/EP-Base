@@ -1,0 +1,334 @@
+{
+  "date": "2026-10-19",
+  "scope": "Skill connection and persistence only; earlier application edits are excluded.",
+  "status": "LOCAL_VALIDATION_PASS_NATIVE_AND_FRESH_SESSION_BLOCKED",
+  "metadata": {
+    "status": "PASS",
+    "skill_count": 33,
+    "agent_metadata_files": 3,
+    "checks": [
+      "real YAML parse with duplicate-key rejection",
+      "unique names and exact registry metadata match",
+      "Codex name/description limits",
+      "relative paths within project",
+      "agent YAML parses; no implicit invocation disabled"
+    ],
+    "skills": [
+      {
+        "name": "accessibility",
+        "path": ".agents/skills/accessibility/SKILL.md",
+        "description_characters": 212,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "ad-creative",
+        "path": ".agents/skills/ad-creative/SKILL.md",
+        "description_characters": 990,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "ads",
+        "path": ".agents/skills/ads/SKILL.md",
+        "description_characters": 956,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "analytics",
+        "path": ".agents/skills/analytics/SKILL.md",
+        "description_characters": 797,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "content-strategy",
+        "path": ".agents/skills/content-strategy/SKILL.md",
+        "description_characters": 659,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "copywriting",
+        "path": ".agents/skills/copywriting/SKILL.md",
+        "description_characters": 989,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "core-web-vitals",
+        "path": ".agents/skills/core-web-vitals/SKILL.md",
+        "description_characters": 239,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "design-taste-frontend",
+        "path": ".agents/skills/design-taste-frontend/SKILL.md",
+        "description_characters": 948,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "eineiro-safe-migrations",
+        "path": ".agents/skills/eineiro-safe-migrations/SKILL.md",
+        "description_characters": 324,
+        "agent_metadata_files": 1
+      },
+      {
+        "name": "emil-design-eng",
+        "path": ".agents/skills/emil-design-eng/SKILL.md",
+        "description_characters": 155,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "impeccable",
+        "path": ".agents/skills/impeccable/SKILL.md",
+        "description_characters": 589,
+        "agent_metadata_files": 1
+      },
+      {
+        "name": "launch",
+        "path": ".agents/skills/launch/SKILL.md",
+        "description_characters": 652,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "performance",
+        "path": ".agents/skills/performance/SKILL.md",
+        "description_characters": 219,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "playwright-cli",
+        "path": ".agents/skills/playwright-cli/SKILL.md",
+        "description_characters": 77,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "product-marketing",
+        "path": ".agents/skills/product-marketing/SKILL.md",
+        "description_characters": 646,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "schema",
+        "path": ".agents/skills/schema/SKILL.md",
+        "description_characters": 526,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "sentry",
+        "path": ".agents/skills/sentry/SKILL.md",
+        "description_characters": 230,
+        "agent_metadata_files": 1
+      },
+      {
+        "name": "seo",
+        "path": ".agents/skills/seo/SKILL.md",
+        "description_characters": 203,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "seo-audit",
+        "path": ".agents/skills/seo-audit/SKILL.md",
+        "description_characters": 812,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "site-architecture",
+        "path": ".agents/skills/site-architecture/SKILL.md",
+        "description_characters": 786,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "speckit-analyze",
+        "path": ".agents/skills/speckit-analyze/SKILL.md",
+        "description_characters": 134,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "speckit-checklist",
+        "path": ".agents/skills/speckit-checklist/SKILL.md",
+        "description_characters": 79,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "speckit-clarify",
+        "path": ".agents/skills/speckit-clarify/SKILL.md",
+        "description_characters": 156,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "speckit-constitution",
+        "path": ".agents/skills/speckit-constitution/SKILL.md",
+        "description_characters": 88,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "speckit-converge",
+        "path": ".agents/skills/speckit-converge/SKILL.md",
+        "description_characters": 166,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "speckit-implement",
+        "path": ".agents/skills/speckit-implement/SKILL.md",
+        "description_characters": 89,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "speckit-plan",
+        "path": ".agents/skills/speckit-plan/SKILL.md",
+        "description_characters": 98,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "speckit-specify",
+        "path": ".agents/skills/speckit-specify/SKILL.md",
+        "description_characters": 87,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "speckit-tasks",
+        "path": ".agents/skills/speckit-tasks/SKILL.md",
+        "description_characters": 104,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "speckit-taskstoissues",
+        "path": ".agents/skills/speckit-taskstoissues/SKILL.md",
+        "description_characters": 137,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "systematic-debugging",
+        "path": ".agents/skills/systematic-debugging/SKILL.md",
+        "description_characters": 91,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "test-driven-development",
+        "path": ".agents/skills/test-driven-development/SKILL.md",
+        "description_characters": 79,
+        "agent_metadata_files": 0
+      },
+      {
+        "name": "verification-before-completion",
+        "path": ".agents/skills/verification-before-completion/SKILL.md",
+        "description_characters": 225,
+        "agent_metadata_files": 0
+      }
+    ]
+  },
+  "integrity": {
+    "status": "PASS",
+    "skill_count": 33,
+    "skill_file_count": 253,
+    "shared_spec_kit_file_count": 20
+  },
+  "validator_tests": {
+    "passed": 10,
+    "failed": 0
+  },
+  "setup_script": {
+    "path": "scripts/cloud-skills-setup.sh",
+    "bash_syntax": "PASS",
+    "execution": "PASS",
+    "installs_packages": false,
+    "uses_network": false,
+    "opens_databases": false
+  },
+  "native_discovery": {
+    "test": "native_app_server_skills_list",
+    "codex_version": "0.159.2",
+    "cwd": "/workspace/EP-Base",
+    "exit_code": 1,
+    "rpc_response_received": false,
+    "read_only_error": true,
+    "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Read-only file system (os error 30)\nError: failed to initialize sqlite state runtime under /run/codex-environment/codex-home: failed to initialize state runtime at /run/codex-environment/codex-home\n"
+  },
+  "prompt_renderer": {
+    "exit_code": 1,
+    "prompt_rendered": false,
+    "error": "Read-only file system (os error 30)"
+  },
+  "fresh_session": {
+    "test": "fresh_codex_session_safe_skill_task",
+    "command": "codex exec --ephemeral --sandbox read-only --cd /workspace/EP-Base --color never --json <safe verification prompt>",
+    "exit_code": 1,
+    "event_types": [],
+    "read_only_error": true,
+    "session_started": false,
+    "model_task_completed": false,
+    "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Read-only file system (os error 30)\nReading additional input from stdin...\nError: failed to initialize in-process app-server client: Read-only file system (os error 30)\n"
+  },
+  "profile_diagnosis": {
+    "project_skills_readable": true,
+    "project_mount_read_only": false,
+    "service_profile": "/run/codex-environment/codex-home",
+    "service_profile_mount_read_only": true,
+    "installation_id_exists": false,
+    "traced_failure": "open installation_id O_RDWR|O_CREAT returns EROFS; app-server also cannot initialize SQLite state",
+    "access_controls_changed": false,
+    "home_variables_changed": false
+  },
+  "current_agent_application": {
+    "mode": "explicit-file-read fallback, not native catalogue loading",
+    "skills": [
+      "systematic-debugging",
+      "verification-before-completion"
+    ],
+    "evidence": [
+      "Read skill instructions, reproduced failure and isolated the service-profile cause before changing project guidance.",
+      "Executed inventory validator and its tests, inspected observed exit codes, and report native loading as blocked rather than passed."
+    ]
+  },
+  "git_export_check": {
+    "status": "PASS",
+    "source": "staged Git tree exported to a disposable directory, not the dirty working tree",
+    "verified_tree": "3a01219fc3b0e66949825a518fcadc0d1c1bef42",
+    "skill_count": 33,
+    "setup_exit_code": 0,
+    "setup_invoked_from": "/workspace, outside extracted repository",
+    "setup_output": "PASS: skill inventory, pinned hashes, names, notices and selection constraints\nVerified 33 project skills in /tmp/eineiro-skill-export-green-ss5qjtn3/.agents/skills\nIntegrity verified; native Codex discovery and new-session application are separate checks.\nStart sessions in this repository; read AGENTS.md and docs/CLOUD_SKILLS.md.",
+    "project_document_links_checked": 38,
+    "missing_links": [],
+    "excluded_unrelated_files_confirmed": [
+      "docs/DEVELOPMENT_STATUS.md",
+      "package-lock.json",
+      "scripts/validate.mjs"
+    ],
+    "temporary_export_removed": true,
+    "before_fix": {
+      "stage": "before Git ignore fix",
+      "tree": "45488f739eb05d08688a8724c1e51c7e72e48e2d",
+      "exit_code": 1,
+      "output": "missing file: .agents/skills/impeccable/scripts/data/font-index-failures.json\nmissing file: .agents/skills/impeccable/scripts/data/font-index.json"
+    }
+  },
+  "unrelated_changes": {
+    "files_hash_checked": 32,
+    "modified_by_this_task": 0,
+    "excluded_from_skill_commit": true
+  },
+  "new_cloud_task_restoration": {
+    "status": "NOT_VERIFIED",
+    "requirements": [
+      "Review/Save and Publish environment draft",
+      "Supported restoration of the local-only commit",
+      "A fresh agent session with the project cwd and a working service profile"
+    ],
+    "platform_limitation": "Restoration of local-only commits is not yet supported reliably."
+  },
+  "boundaries": {
+    "packages_reinstalled": false,
+    "live_databases_accessed": false,
+    "secrets_read_or_changed": false,
+    "website_published": false,
+    "git_push_performed": false
+  },
+  "instructions": "docs/CLOUD_SKILLS.md",
+  "safe_task": "docs/SKILL_SMOKE_PROMPT.md",
+  "git_tracking_fixes": [
+    "Explicitly track the two pinned Impeccable scripts/data font-index JSON files previously excluded by data/.",
+    "Preserve upstream bytes and whitespace with scoped Git attributes; project-authored skill and constitution retain ordinary whitespace checks."
+  ],
+  "git_diff_check": {
+    "status": "PASS",
+    "scope": "Staged installation changes with explicit vendored-source attributes; 232 upstream whitespace notices preserved, not edited away."
+  }
+}

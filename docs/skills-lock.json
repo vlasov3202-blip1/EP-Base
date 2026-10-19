@@ -1,0 +1,964 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-10-19",
+  "skills": [
+    {
+      "name": "accessibility",
+      "path": ".agents/skills/accessibility",
+      "status": "vendored-project",
+      "description": "Audit and improve web accessibility following WCAG 2.2 guidelines. Use when asked to \"improve accessibility\", \"a11y audit\", \"WCAG compliance\", \"screen reader support\", \"keyboard navigation\", or \"make accessible\".",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/addyosmani/web-quality-skills",
+        "commit": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
+        "path": "skills/accessibility"
+      },
+      "version": "2.0",
+      "license": "MIT",
+      "license_file": ".agents/skills/accessibility/LICENSE",
+      "group": "web-quality",
+      "files": {
+        "LICENSE": "c122223ac43e86421958e18623979942c21b642951e2e3736dcb63eff13587c3",
+        "SKILL.md": "267fb2a0707d6142f2871f22688203a42ba21291a2aa200fb740936e41362b5d",
+        "references/A11Y-PATTERNS.md": "f10e238dd4dd3c4f51134c2056bc02d3dd4f8fb6ccc9145c2c1ba7aab4d58140",
+        "references/WCAG.md": "16683e025e3833d931c9d880645d98a448827f97e10189b6c8f12c832e7a2361"
+      }
+    },
+    {
+      "name": "ad-creative",
+      "path": ".agents/skills/ad-creative",
+      "status": "vendored-project",
+      "description": "When the user wants to generate, iterate, or scale ad creative — headlines, descriptions, primary text, or full ad variations — for any paid advertising platform. Also use when the user mentions 'ad copy variations,' 'ad creative,' 'generate headlines,' 'RSA headlines,' 'bulk ad copy,' 'creative testing,' 'write me some ads,' 'Facebook ad copy,' 'Google ad headlines,' 'LinkedIn ad text,' 'static ads,' 'ad templates,' 'iMessage ad,' 'ChatGPT ad,' 'creative strategy,' 'creative roadmap,' 'creative retro,' 'hook writing,' 'creative review page,' 'motion video ad,' 'faceless video ad,' 'UGC ad,' 'greenscreen ad,' 'TikTok/Reels ad format,' 'Meta ad format tier list,' or 'creative format taxonomy.' Use it to produce or iterate ad copy at scale. Copy avoids AI tells like 'it's not X, it's Y' reveals. For campaign strategy and targeting, see ads. For landing page copy, see copywriting. Test hypotheses must be falsifiable, naming the metric, the comparison, and the expected direction.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/coreyhaines31/marketingskills",
+        "commit": "365b412152b9542499ca1439426f7fc3cc92bb65",
+        "path": "skills/ad-creative"
+      },
+      "version": "2.12.1",
+      "license": "MIT",
+      "license_file": ".agents/skills/ad-creative/LICENSE",
+      "group": "marketing-seo",
+      "files": {
+        "LICENSE": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "SKILL.md": "973244b10730f514ea1ec2c0a4f132d570e55cd3298392b4fc15f8227e5228ba",
+        "assets/creative-review-template.html": "0ca7cce4fa809235aee776606205925d8dc01bde8a8325e2af7197d86394d3b7",
+        "evals/evals.json": "10bf9d717c3605aeea348aa1cdd42c46e20585d7f0a7a0220c2125e7d5d8f892",
+        "references/awareness-headlines.md": "0f9b2408e402ad03956ff84bf31e5c594371dd3e2974c5390c42af4e3c60ed4d",
+        "references/creative-review-page.md": "03518911b1648bce12a3d579c5979b97442af50de24ff74809a43ba3395dcb3a",
+        "references/creative-roadmap.md": "a0be737841d8a73f0cf02094c9ed1e3f7c050e1c6f867794b1fa8b64dbf3b50e",
+        "references/generative-tools.md": "f4dc366913c5d20d45442d7df91cfbfedd746946d2a51d20977db7e938ab652f",
+        "references/hook-system.md": "2967ecbf32423bbb70ca9587b0af8d257466c852106fe909f6447bbab9a18002",
+        "references/imessage-video-ads.md": "8b798cc2249188a4c1679eea33a2bd7736b2eb02fe5de41e3fc8eb6fa2de16f4",
+        "references/meta-creative-formats.md": "09720c4550761365a8c93c8587fe629c87718dbb331677312d93e5b2faa9761f",
+        "references/motion-video-ads.md": "c64e83199f0316e12e7811667f09a6475a34044c8eec2e3ba549faf9c33fc28c",
+        "references/platform-specs.md": "de69753161071a8d3e4d244280562810a6c4d6ae2696c5a21940f983abd0aa8e",
+        "references/short-form-video-specs.md": "1aa1cc498e350ed00ec4783b60d2eddee5bc98f25750761f6086742d0758f953",
+        "references/static-ad-templates.md": "fc93d3f5fa6b3442cc1c6785eda05979da0d299c640d5f0a277033209d68e651"
+      }
+    },
+    {
+      "name": "ads",
+      "path": ".agents/skills/ads",
+      "status": "vendored-project",
+      "description": "When the user wants help with paid advertising campaigns on Google Ads, Meta (Facebook/Instagram), LinkedIn, Twitter/X, or other ad platforms. Also use when the user mentions 'PPC,' 'paid media,' 'ROAS,' 'CPA,' 'ad campaign,' 'retargeting,' 'audience targeting,' 'Google Ads,' 'Facebook ads,' 'LinkedIn ads,' 'ad budget,' 'cost per click,' 'ad spend,' 'should I run ads,' 'ABM,' 'account-based marketing,' 'B2B ads,' 'lead quality,' 'negative keywords,' 'Performance Max,' 'thought leader ads,' 'when should I kill an ad,' 'search terms report,' 'wasted spend,' or 'is this campaign working.' Use this for campaign strategy, audience targeting, bidding, and optimization. For bulk ad creative generation and iteration, see ad-creative. For landing page optimization, see cro. For outbound to target accounts, see cold-email. End every recommendation with facts, hypotheses, and missing data, and label unavailable inputs MISSING instead of estimating them.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/coreyhaines31/marketingskills",
+        "commit": "365b412152b9542499ca1439426f7fc3cc92bb65",
+        "path": "skills/ads"
+      },
+      "version": "2.6.1",
+      "license": "MIT",
+      "license_file": ".agents/skills/ads/LICENSE",
+      "group": "marketing-seo",
+      "files": {
+        "LICENSE": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "SKILL.md": "420447524c5b2fa36c0c2636f57b84fd999c288057fb738c5e0a845c7c96c0e0",
+        "evals/evals.json": "8fa9ca67780a2d30865f8a3531148df16f3f0bd296862ff75c116c83ba6e5764",
+        "references/abm-playbook.md": "acb5c89ced4497674d012d015504a5c8e17c619bd2fc1f0191d833a9957eb44a",
+        "references/ad-copy-templates.md": "853ab37e23b75aa3355bdbed9a1357948e635dbdf737be5a1a7aa0126d701206",
+        "references/audience-targeting.md": "21ed7c99fb1124ca38635d6f313cc2f3ca49a192f390cd55293b7bd5a028e1b1",
+        "references/audit-guardrails.md": "ffcbbda4cabd919bce93c11699fac49059dde7d96c64dbf34f77c482420e6667",
+        "references/b2b-paid-playbook.md": "21dc1125905f8d985763996afb24a2bf54539330535b7b2b45c052901c5b2006",
+        "references/conversion-tracking.md": "33da4f9bb1042c5b226459cf420b21954705fd8c1d885e67326b1e57492561d8",
+        "references/creative-research-automation.md": "c2894a19eff596412f52c4a8aceea1b8f390e7f1821e9c13cb3e6c693e625cfd",
+        "references/google-ads-audit-checklist.md": "7faaecaf89d0f9b094fd027295c95824b3b8f0dfa89e51a00663d83e0017b93d",
+        "references/google-search-playbook.md": "5771d6c876ddd2b3cbaa28190884eebd698112febcf0ea83aeb0c8016e04e097",
+        "references/linkedin-b2b-playbook.md": "8f38aadbf24c1a554fbaa47bf2f24bac0c4773fa16f65d34c1c600e5e3d8a6ee",
+        "references/meta-andromeda-playbook.md": "8da58633c3866b9a4aa07b234a9a7e96eeb19a9497bb85bae09f1aac36e27268",
+        "references/meta-decision-system.md": "861709bcc4e7467eac7d4de63f0bdd6709eb3c12a1d72b3855dce313ca15407f",
+        "references/operating-check.md": "0039550a0867dc5f80595b824f8d6a6a298c5777ef2d0e54d225c1405f900de3",
+        "references/payback-period.md": "77b0f35b65b35cdee53881105a16498e3e4538b657923a176b99a19b807daba1",
+        "references/platform-setup-checklists.md": "b86e206f8c7233c235d7d385a69e17fac16ac001ab130242b7700fe650752f69",
+        "references/reading-google-ads-data.md": "e5bb10f5bd81eabaae63c005a9be8c3f70d63df60e192dcd37faf3718ff0fd09",
+        "references/rsa-output-spec.md": "285fec5c1671c9cc1a4cdfbcf06d8a54a022cbad52693941457d90e1f2c5f503"
+      }
+    },
+    {
+      "name": "analytics",
+      "path": ".agents/skills/analytics",
+      "status": "vendored-project",
+      "description": "When the user wants to set up, improve, or audit analytics tracking and measurement. Also use when the user mentions \"set up tracking,\" \"GA4,\" \"Google Analytics,\" \"conversion tracking,\" \"event tracking,\" \"UTM parameters,\" \"tag manager,\" \"GTM,\" \"analytics implementation,\" \"tracking plan,\" \"how do I measure this,\" \"track conversions,\" \"Mixpanel,\" \"Segment,\" \"are my events firing,\" or \"analytics isn't working.\" Use this whenever someone asks how to know if something is working or wants to measure marketing results. For choosing attribution models, comparing multi-touch/MMM/incrementality, or reconciling conflicting numbers across tools, see attribution. For A/B test measurement, see ab-testing. Rate metrics divide matching closed windows — never full-period spend by partial-period results.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/coreyhaines31/marketingskills",
+        "commit": "365b412152b9542499ca1439426f7fc3cc92bb65",
+        "path": "skills/analytics"
+      },
+      "version": "2.2.0",
+      "license": "MIT",
+      "license_file": ".agents/skills/analytics/LICENSE",
+      "group": "marketing-seo",
+      "files": {
+        "LICENSE": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "SKILL.md": "100dc960adeb471bb79275133eaeaf05b5d3c95e96598b3c03cac5a3d8e43d5c",
+        "evals/evals.json": "526f4bf20cedca26906dd0c3dfb6ae67de3f5b17977eb426820ca406c5ce0e59",
+        "references/event-library.md": "c60e3e145e6b06258570350b614913ed9150143b4494a71396abaef479502b05",
+        "references/ga4-implementation.md": "b0232fc2ee873ffa5e6cbdf0ae712a5d74b18263372139d8ae72f9dcf48a8db4",
+        "references/gtm-implementation.md": "0b161102de710c978cc2ac52c78c79f32e184bc028aa946eba18e777d7a60d64"
+      }
+    },
+    {
+      "name": "content-strategy",
+      "path": ".agents/skills/content-strategy",
+      "status": "vendored-project",
+      "description": "When the user wants to plan a content strategy, decide what content to create, or figure out what topics to cover. Also use when the user mentions \"content strategy,\" \"what should I write about,\" \"content ideas,\" \"blog strategy,\" \"topic clusters,\" \"content planning,\" \"editorial calendar,\" \"content marketing,\" \"content roadmap,\" \"what content should I create,\" \"blog topics,\" \"content pillars,\" or \"I don't know what to write.\" Use this whenever someone needs help deciding what content to produce, not just writing it. For writing individual pieces, see copywriting. For SEO-specific audits, see seo-audit. For social media content specifically, see social.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/coreyhaines31/marketingskills",
+        "commit": "365b412152b9542499ca1439426f7fc3cc92bb65",
+        "path": "skills/content-strategy"
+      },
+      "version": "2.1.3",
+      "license": "MIT",
+      "license_file": ".agents/skills/content-strategy/LICENSE",
+      "group": "marketing-seo",
+      "files": {
+        "LICENSE": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "SKILL.md": "dce9f4027ae129691e92623541a360bee9356137a7eecf68afa95674af118e68",
+        "evals/evals.json": "10167e7125ee77cbabe4f03953750dd99ea147f7461027fdbb0cf8e089e5506d",
+        "references/content-distribution.md": "1861a1aab0627ab29c279000879a9889242da1ba85e677acdc759c66a6241778",
+        "references/headless-cms.md": "efc796ae9596d1efcb876683db2d9b7c10c83e76e1cb69e527097907d5b4fc3f"
+      }
+    },
+    {
+      "name": "copywriting",
+      "path": ".agents/skills/copywriting",
+      "status": "vendored-project",
+      "description": "When the user wants to write, rewrite, or improve marketing copy for any page, including homepage, landing pages, pricing pages, feature pages, about pages, or product pages. Also use when the user says \"write copy for,\" \"improve this copy,\" \"rewrite this page,\" \"marketing copy,\" \"headline help,\" \"CTA copy,\" \"value proposition,\" \"tagline,\" \"hero section copy,\" \"this copy is weak,\" \"this sounds like AI,\" \"AI slop,\" \"make it sound human,\" or \"help me describe my product.\" Drafts never use AI tells like \"it's not X, it's Y\" reveals, \"no X, no Y, no Z\" lists, or sentences that trail into extra comma clauses. For email copy, see emails. For popup copy, see popups. For editing existing copy, see copy-editing. For the offer underneath the copy (bonuses, guarantees, value framing), see offers. Claims must be supportable, and a declined claim names the evidence that would unlock it. Diagnoses the input first (blank brief, real voice, or point edit) and changes only what it calls for.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/coreyhaines31/marketingskills",
+        "commit": "365b412152b9542499ca1439426f7fc3cc92bb65",
+        "path": "skills/copywriting"
+      },
+      "version": "2.3.1",
+      "license": "MIT",
+      "license_file": ".agents/skills/copywriting/LICENSE",
+      "group": "marketing-seo",
+      "files": {
+        "LICENSE": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "SKILL.md": "13c580c2432a4499e9dfdcf5d553df7aa6589e90cf5bd869fb4fbde5caf9f567",
+        "evals/evals.json": "ccec86052a0edd8646d0e50e63c08e0e971f443d8f6e9178843a1629f79efdb0",
+        "references/ai-tells.md": "b98c3a19b3a75c714d69e80a0076e4c07244b0e833c2ce81ff2631224fb7f7b2",
+        "references/copy-frameworks.md": "352122944bf9e891ceb0e003adce41591d111e9d97057700626249919dfe430d",
+        "references/natural-transitions.md": "9bd61b0de5be2c4de4ce130c68236b4f290b12737823827a458bb2b4c8584683"
+      }
+    },
+    {
+      "name": "core-web-vitals",
+      "path": ".agents/skills/core-web-vitals",
+      "status": "vendored-project",
+      "description": "Optimize Core Web Vitals (LCP, INP, CLS) for better page experience using field and lab evidence. Use when asked to \"improve Core Web Vitals\", \"fix LCP\", \"reduce CLS\", \"optimize INP\", \"page experience optimization\", or \"fix layout shifts\".",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/addyosmani/web-quality-skills",
+        "commit": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
+        "path": "skills/core-web-vitals"
+      },
+      "version": "2.0",
+      "license": "MIT",
+      "license_file": ".agents/skills/core-web-vitals/LICENSE",
+      "group": "web-quality",
+      "files": {
+        "LICENSE": "c122223ac43e86421958e18623979942c21b642951e2e3736dcb63eff13587c3",
+        "SKILL.md": "731aa78c0347e8b3e191b75962175bee058ce73817278e610ac0fe546e685914",
+        "references/CLS.md": "c4fa0cd6311720b413018471a6ac9240e87db52af3b6e306ffb6684491f15898",
+        "references/INP.md": "7d40cf6053e9bb8a8a77e02da7c6b25aa8e6c1c092b48d8f9c8f30e9b25cf3a7",
+        "references/LCP.md": "522054d44b7a55409cbde511e8d365f7fa52399dd1e72b8d6b44a92ecddca81f"
+      }
+    },
+    {
+      "name": "design-taste-frontend",
+      "path": ".agents/skills/design-taste-frontend",
+      "status": "vendored-project",
+      "description": "tasteskill v2, the anti-slop frontend skill. Art direction for websites, distilled from a study of 247 curated gallery sites (One Page Love, Awwwards Sites of the Day). Deals researched directions (idea, composition, type, palette, photographs, section blueprints) from a library, enforces a strict no-slop house style with a real-browser inspector, and runs a look-and-fix loop on screenshots. Use this whenever you build, design, redesign, restyle, polish or review a landing page, marketing site, portfolio, product page, one-pager, hero or any public-facing web page, in any stack (HTML/CSS, React, Next.js, Vue, Svelte, Astro, Tailwind) — also when the user says a page looks generic, templated, \"AI-made\", sloppy, or asks to make it look designed, premium, award-level or less like every other site. Also for app screens: dashboards, admin and analytics views, settings, inboxes and other screens people work in, with their own run and rules.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/Leonxlnx/taste-skill",
+        "commit": "b9ca2fd8047f4c72d7da90ebc1c1203e57c72cd2",
+        "path": "skills/taste-skill"
+      },
+      "version": "b9ca2fd8047f",
+      "license": "MIT",
+      "license_file": ".agents/skills/design-taste-frontend/LICENSE",
+      "group": "design",
+      "files": {
+        "LICENSE": "4575a543ab88dad12ccea7d97e563d0bce5b448b06072e65d3264497dad326df",
+        "README.md": "5e33fd716b3e1ffaca9340f645d44c193f9b446107fa67f0cce498d33025672c",
+        "SKILL.md": "d955dae4ba8ab2d994f4bb06b4bf412a1d9875433a8597939c391f4bae91dd7a",
+        "assets/app.css": "16518c3a999fb81b2698137f1f743128c189272e8b1d411c4b02598c6755b67f",
+        "assets/base.css": "aa6ea21613c79e06e06dea3d33200c78590c89b0346bb976ec07947bb45ceafa",
+        "assets/base.js": "8d50416125596b84c0083d5d5ffba09add57db4b06cbf0eedac2d4999b7653bc",
+        "assets/charts.js": "89071120bd09eb276d9e568bab433ed035ea8b3a1b72750a1fa204a63e3d4ab4",
+        "assets/scenes/stage.css": "b5c587dac45ac6fcc34ae7cb4aa2b3e43797b2ef5d71fd32b48483bda3fca3e0",
+        "assets/scenes/stage.js": "3012ade75e01a9c0c81b5835a60e9ade965ed310cd58d85a7ad10e4ed4a1ad16",
+        "evals/evals.json": "df0ee2a248cd5445c0e1600eb095dc0d43dd312f5b4bb4316a78471ae0d22a74",
+        "library/app.json": "3678ccbe1e8d05feff6d4f07fa16a0d610aefeea5e697e842a876713ba763cf5",
+        "library/directions.json": "d71e3824af33a92d9e1ca543e17f80baa5b7a30c815df5125cfe3300a14892c1",
+        "library/heroes.json": "98d5e01104412a5fb27936f9c686f3bc0a5f76ce0793186d3de46b982c65b172",
+        "library/motions.json": "51815dd09a823c829897f99ed9ea7dc5c35bd305ac989b8a0632ea6d42a3f08b",
+        "library/palettes.json": "a14be9f45baba848c53436f4aa44eb4f1925ad3e232c5d1dcddf4f565661a525",
+        "library/photos.json": "8fc3b76bca90f44675bd99d99bb4ce95b0756c6c5d4141b7e917d11d90e61520",
+        "library/sections.json": "7c2c8a470a22501176948661f803434db8c542a511281752c717252de80c1ad8",
+        "library/sites.json": "a2bc4d0cff8ebff481f0dfd4879c106d5e1e16cb3122f9ab3702184a5e1f3502",
+        "library/type.json": "01a36c53c4398f48ff945b0f31a256281c1c0c1075729747c11bec70867b6232",
+        "references/app-screens.md": "55e937ec30de605b53a11310b446f328a3ce7403de24fff008920a00be1a5ed4",
+        "references/colour.md": "6556bcc7eed48b7bc2d0d281c28bf57c1b75e94d7ca0bde49f5d9df8c6a09351",
+        "references/copy.md": "676edbe75d5f3cfd8a793010ea9f730525ae074b231a674c2426264d3398262e",
+        "references/critique.md": "9c2f4392674530b3f02ac529fba53d82ab37b85f401c4c1989fbe98d6217f0b4",
+        "references/imagery.md": "518def6b2c643b295e13e66b09b66f2e3fc1421d3cf6c7dbb1dc749097ad2ad9",
+        "references/layout.md": "40080640719b07737afb94a8868afef87767a1ab4892814d9b6882e2d283453b",
+        "references/motion.md": "79f94d8469898d2bf6186c198ad86ddf691a67c6536eaec36a4ec101285d9a37",
+        "references/research.md": "83433646a352cae588591e05bc0a75fe1deadff55ede8851bc8dd5dd483adfc5",
+        "references/scenes.md": "733ac7258a1a28f2f6ae8205bc36ba66c563594ad0a2e2f829c5eaaba3199a61",
+        "references/tells.md": "8e6de4411c43d3108f832b3f33bb1a2a838148a72b92a176df893b67d99a0da9",
+        "references/type.md": "6353ff1d0ce2f9913628c88fbcb7dad3cc3877e61196848bce99e33a17d20611",
+        "scripts/assets.mjs": "b4b4b99b5634735f5a0b4213169cda5240ee6bbed8ed8042ad1bcf2b6607c1fa",
+        "scripts/draw.mjs": "6c2047d207d2400d3b099956dfe2ac306203b614246e66bc8760212a7f797dbf",
+        "scripts/inspect.mjs": "9482c546288d4d5c738a915905959e99394551ec27bc202ed443af12a02bd1f7",
+        "scripts/lib/app-draw.mjs": "aa0802d341d19b53ec14ec21746e428be49a8ec3ed7b30253194105fc18a8df6",
+        "scripts/lib/cdp.mjs": "404c8825ce60e4e5e101344f7c36d05bfe335d47f3ab6c2d5dfde12e0b8f1b94",
+        "scripts/lib/probe.mjs": "c14fd0bed7727855a1f3fcf5ade945fba97f314562fd7430354168b2da25433b",
+        "scripts/lib/rules.mjs": "5de058543b3bd6f3dd2f85ff1c1e5e1f91918ba9f4454e7ee0b8934c607982f9",
+        "scripts/lint.mjs": "05f2fae2f56fc051b539cdbacb43a6f78fbbfb9644bb74aa11be472ff12dcaf5",
+        "scripts/scenes.mjs": "234ec582e2b841457c33033feeeba8535f9ac285495a74d08dc533a1566c90d5"
+      }
+    },
+    {
+      "name": "eineiro-safe-migrations",
+      "path": ".agents/skills/eineiro-safe-migrations",
+      "status": "vendored-project",
+      "description": "Use for EINEIRO database schema/data migrations, storage changes, backup/restore rehearsals and rollback planning. Verify the target, prove a backup restores, rehearse in isolation, validate tenant data, prove rollback, then verify and release only this run's pauses. Default to planning when target or authority is unknown.",
+      "source": {
+        "kind": "project",
+        "repository": "https://github.com/vlasov3202-blip1/EP-Base",
+        "revision": "1.0.0",
+        "path": ".agents/skills/eineiro-safe-migrations"
+      },
+      "version": "1.0.0",
+      "license": null,
+      "license_note": "Original EINEIRO project material; distribution remains under repository owner terms. No third-party skill text copied.",
+      "notice_file": ".agents/skills/eineiro-safe-migrations/NOTICE.md",
+      "group": "migrations",
+      "files": {
+        "NOTICE.md": "6931f4b220a2fd8ef28ea48891eca99bc67d7cf0b296b3d5331bad604e8f74dc",
+        "SKILL.md": "441095d94551a3c7803f6c717ff4ab9556e5b9fd5cccef2aa52065afcc96c245",
+        "agents/openai.yaml": "d6961500fd7927578ba3fec20d5a4a5e510f577b47d19bf7cac962d9766cbff1",
+        "references/storage-contracts.md": "59da691bd3872e3114569a5f458cbbe94b023f9c5e9ba6c25d7021ad54d07725",
+        "templates/MIGRATION_RUN.md": "687875ed54ef31d0fb81a1b2d4efa93eb5cf60b0ea6fddb6b823c5d3644bd6fe"
+      }
+    },
+    {
+      "name": "emil-design-eng",
+      "path": ".agents/skills/emil-design-eng",
+      "status": "vendored-project",
+      "description": "This skill encodes Emil Kowalski's philosophy on UI polish, component design, animation decisions, and the invisible details that make software feel great.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/emilkowalski/skills",
+        "commit": "2d228630ba1446365f614a108cb8252f1feda202",
+        "path": "skills/emil-design-eng"
+      },
+      "version": "2d228630ba14",
+      "license": "MIT",
+      "license_file": ".agents/skills/emil-design-eng/LICENSE",
+      "group": "design",
+      "files": {
+        "LICENSE": "4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b",
+        "SKILL.md": "ffbe68e6007fb42cb8149f089b400a1ca007d59ba23e8948e2be4476f3175939"
+      }
+    },
+    {
+      "name": "impeccable",
+      "path": ".agents/skills/impeccable",
+      "status": "vendored-project",
+      "description": "Use when the user wants to design, redesign, shape, critique, audit, polish, simplify, harden, animate, or otherwise improve a frontend interface: websites, landing pages, dashboards, product UI, components, forms, settings, onboarding, empty states, and native iOS or Android screens. Handles UX review, hierarchy, layout, typography, color, motion, UX copy, accessibility, responsive behavior, edge cases, and capturing or documenting design systems (DESIGN.md, tokens). Also for making bland UI bolder, loud UI quieter, or ambitious visual effects. Not for backend-only or non-UI tasks.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/pbakaus/impeccable",
+        "commit": "0665bd812ae0908fcab17b96fd4f840defb882d9",
+        "path": ".agents/skills/impeccable"
+      },
+      "version": "4.6.0",
+      "license": "Apache-2.0",
+      "license_file": ".agents/skills/impeccable/LICENSE",
+      "group": "design",
+      "files": {
+        "LICENSE": "02bb8c3b4e70190e3986c0404ad2fd8d639b4f534252d82379cc1b502b6d1812",
+        "NOTICE.md": "c60a093c2845fd9fb82f9c6f742ece31f379f8190b535309d32d66c45ccffdcb",
+        "SKILL.md": "5fb0d412928c03e62d2536adfd878ad6aad6f9ce343956aa4f7164da06da3459",
+        "agents/impeccable_asset_producer.toml": "4dbdb0cfdc2466961da6b22d200f3ec7bf8bb47c27448a2e6e3c03cdbf589831",
+        "agents/impeccable_documenter.toml": "2feb3768125ba6469c92a50d516727e6d42f44579165ddfd33409948e2a3803d",
+        "agents/impeccable_finish_reviewer.toml": "1b80232e22d52b06a7278b9ca1f24f871a181c62cd91f4b18728807e7cf49dbd",
+        "agents/impeccable_manual_edit_applier.toml": "6c9ce3e27ec4520ead001da3aad2a2ebba481c4e5cd22873db8890259ee579fe",
+        "agents/openai.yaml": "ce9967ad70f99cf04456f3347c266723c2fbbb600267d10a822b7cd20562c321",
+        "reference/adapt.md": "9807cdc112b8bcbdeff9cd2516cda4d07129f1d47f29df4d57645344f34950c1",
+        "reference/adapt.native.md": "2455a2613e1fa29b986521c73cbad9424ccda70ef6cbe505779dbca5e16272a2",
+        "reference/android.md": "058f81f256134841875fd3183e06b37a023de0c877fd2b9eecd97011640791fe",
+        "reference/animate.md": "d658c48ffbe0031e8e3b318996cad6ceafe29e40aa50d5bb25e4bf1d6839dc7c",
+        "reference/audit.md": "4b726d8f13ca1dbb82ca8179cbfefca8c53c13766fef4d7b8870f5d4324da2d6",
+        "reference/audit.native.md": "2898eff507738f9102107809e671df3e69f889dee30073030fe96fb2483d8ea3",
+        "reference/bolder.md": "05b78fb0595e4d5afbf5f17470c84e89cf82f205fea3a6e9b6d8d779b7c4aab1",
+        "reference/clarify.md": "173dd66abe65633910dcb04a51f40d6ff2a793f87088f022a02fc4cad24dd133",
+        "reference/colorize.md": "bc5f71f1129d0f2c310d913d07c8dc609a1d25644121bd78c308f42d52a0b9e9",
+        "reference/component-review.md": "10489e5265e49a4ef2737cd0e674c149ed41e1f703efe922e53ea3c91e833427",
+        "reference/craft-floor.md": "52b523e92b76daff71be2ec8c732c374c670f8d03e1296388738e581479ec1bb",
+        "reference/craft.md": "9205e222bc6565b37fb504ceec93233c2d2a456802b69d16e6b1c44723907c4c",
+        "reference/critique.md": "c210c9506877c6c8d88880a337fddd95d4315daf70ed6bc631ee6520481f1a0c",
+        "reference/degraded/asset-producer.md": "877d274f41500c780bad25b2bca7fa95eff1a32a7b95397dd388c72848e86a6c",
+        "reference/degraded/documenter.md": "bcc05ea92faebb5c74037a9d4263a5ce9a56f5ab07c8ab3c59ee704d8cade745",
+        "reference/degraded/finish-reviewer.md": "c33c4cfa7f0ce0bedde80d4fc3b595e747d0e9b43a77f06cacb8e899802f709d",
+        "reference/degraded/manual-edit-applier.md": "5fae7f8a2fc3ddd49ad0a413446dc44daedef5b6b7de5eb935bd2fbfad646d58",
+        "reference/delight.md": "098a891028ce59c212b747d3c70468dd750aff7053a703d1336045ed31e0da7c",
+        "reference/distill.md": "56ca75d680eb8b61ca3a298d18e895cd4a0dcc520c31d7938a4807ff8dcf18ea",
+        "reference/doctor.md": "3dbef3fe606de4de0f1b5cab5f19902799e05cf566eb8223e9aa1632eeb04698",
+        "reference/document.md": "531d2b6c8c9affc7b794de7904905ff9b73962b986968fd1e90273eb26930b6e",
+        "reference/extract.md": "5477ae97189e5c1236cee71a25a5ae50014429a5a2e6da28355c8021a6cdeddd",
+        "reference/generate.md": "11385badfb532196cec249e73bac2b7f58ada033ed8c4b02b9f0d64ddb46f0dc",
+        "reference/harden.md": "f69f1f0b3f97c194795ece67131b533e951130eeb8f202cf40e364b7a6badb7c",
+        "reference/hooks.md": "3c623f602043dcbdad8c043491e57ece96f699106f8378cc8a720e6b39c0ddcd",
+        "reference/init.md": "51349b3a32c7f907102dd680d8e2df9da27082caf46ee15c673be7ce14a5363b",
+        "reference/ios.md": "40c87038b5f75147a5952a96237acf312a327bf70c1bcd8e0a5f064625ae9668",
+        "reference/layout.md": "0bc7d7971b3edf2acd0580e847458dc6d84129d90715b452799ace3bed815c7c",
+        "reference/live-setup.md": "2b5b2fbf5f658f34ea1997fb1aeebe01604d05187f75c6a4f1f55a5bc78520a4",
+        "reference/live.md": "7caeecefe54d68bc915a7f2978cba5e88eda69a239cb09dcce78c6d94e93df84",
+        "reference/mode-operate.md": "7a52dd7a94ee75f6ae89542c86a1b6e1d306812b16e0d9dbf12d4acad44d148b",
+        "reference/mode-persuade.md": "21e78c8a77badb3f83290cd4577ed3b24bd4dd3b57136d7da75733d4f3ee9ac0",
+        "reference/mode-read.md": "a569989e6a3d6453b4c45e9474e162a15cc54e11732ac6baa7990a6e7cccc0b5",
+        "reference/new-work.md": "c2eb99db2f30598ef0d2e2f7163bb8a62ca2e5524de42a784b0d1f7117b1800f",
+        "reference/onboard.md": "a2b8fd01ea12139b39b3285393f805bb8c326e11b2234dbff4c26c17b4e9c280",
+        "reference/operate.md": "a9d2203acd45ca33a13d5c68b02b23ed512425ac15f0e8438318ed124b43729d",
+        "reference/optimize.md": "89d679ec08e55fe7661d54addc950c2ff77cf574aa97e593ec6da089fd1efedf",
+        "reference/overdrive.md": "0a0d4ae6eea720c6d6e1c073fc77192d7c2100f78a44d9a8d262ddf22270cf4d",
+        "reference/polish.md": "81666fc7f783b4e3514db6554e713dc0479bd9cdedb06e93d15f8b579aae869a",
+        "reference/quieter.md": "9e03b55c6bbdd4acba28cfa9c3b74ba1a4448cdbd35a7200990ab460c6eecaa0",
+        "reference/region-map.md": "778cedc9199b407d3e23fa1041e38d548b00b1101a33517aa2a2eb299f9d0edc",
+        "reference/routing.md": "77ae09542fbc10aa4e8b119d6fd19359908a47c13c30068d6a150bfdb50e3e10",
+        "reference/shape.md": "a55f016c046cb6a27c55bd7f346375aeb506a755c4fbca19a5f92dbd42309c23",
+        "reference/typeset.md": "c26c5b4524f3ccb650ed0680c10c25fd18083f8ebfd00a54c4d983c4747aab70",
+        "reference/visualize.md": "1c81a831f9dd28b908306fa06e2f2944ca4595ff3df6570750c10bf806465f00",
+        "scripts/VERSION": "e0a25b3b7adde370a854cb1b4866bdc4b565236f0ee65dcdb1b7cd1bc3b6f071",
+        "scripts/command-metadata.json": "e8720f3aa41135211cc58cc299a39eeda86c75651f4279cc1ede8db10dcc0584",
+        "scripts/data/font-index-failures.json": "835f19a0a3812f3652dd6979a2ce5597f654fd01f26e1b420b92d5f42b997ce4",
+        "scripts/data/font-index.json": "47edbdfaf27073c47033d1ac7dfee881be49e2dcbda7671d1157300481dde6da",
+        "scripts/impeccable": "f5d9fcd37559ed6af782306f71b7688ad1ec5e1a4f8ae1ef4d3168f42523b1b1",
+        "scripts/impeccable.cmd": "e0dcc4cd739c8a6ac9e8ce637c216cf8bd4ddae36a8bac458345bdb5a5d7e252",
+        "scripts/live-browser-dom.js": "4b379aff87ce0f485008a2b6a0dc711d00a869f5cf0ec2459279d6364fbf0c9e",
+        "scripts/live-browser-ignores.js": "c1cb6877ca99a0c1b38ba0c7d59f32702d3022f6821d8045f7133f7c40b6362f",
+        "scripts/live-browser-session.js": "2b45c12bef4e25d40b673044c9f124d1da6dfa72ef3f0c09ff30fdb419048e5d",
+        "scripts/live-browser.js": "0fc9a1c47540fd088a7d917a478bf3341fc477dd3d87489cfc1fdb1009c00b98",
+        "scripts/modern-screenshot.umd.js": "bb36665889124a0b6e15f16045265737449c3bdcf2712cdb08af3cfa01563e2b"
+      }
+    },
+    {
+      "name": "launch",
+      "path": ".agents/skills/launch",
+      "status": "vendored-project",
+      "description": "When the user wants to plan a product launch, feature announcement, or release strategy. Also use when the user mentions 'launch,' 'Product Hunt,' 'feature release,' 'announcement,' 'go-to-market,' 'beta launch,' 'early access,' 'waitlist,' 'product update,' 'how do I launch this,' 'site launch,' 'go live,' 'pre-launch QA,' 'launch checklist,' 'GTM plan,' 'we're about to ship,' 'changelog,' 'release notes,' or 'what did we ship this week.' Use this whenever someone is preparing to release something publicly. For ongoing marketing after launch, see marketing-ideas. For the offer being launched (bonuses, guarantees, scarcity, naming), see offers.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/coreyhaines31/marketingskills",
+        "commit": "365b412152b9542499ca1439426f7fc3cc92bb65",
+        "path": "skills/launch"
+      },
+      "version": "2.2.0",
+      "license": "MIT",
+      "license_file": ".agents/skills/launch/LICENSE",
+      "group": "marketing-seo",
+      "files": {
+        "LICENSE": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "SKILL.md": "30537ad3f4b0429fcc4053cf6bf04bc0dee316b9e5f7e7ec2e74a9bc44a9ead7",
+        "evals/evals.json": "f2ceb01d664e24ea253789a9a686997f5cc33a0fc99f57bf215acdada787322c",
+        "references/shipped-changes.md": "873c79d17d3f428147348a9cc2a5e3d6bb8282cf13fc8a143d539840e8abaa96",
+        "references/site-launch-qa.md": "aac0447d0d518468e86e971f4e781b61ee05e81dada402e2edcef709cc6418ab"
+      }
+    },
+    {
+      "name": "performance",
+      "path": ".agents/skills/performance",
+      "status": "vendored-project",
+      "description": "Optimize web performance for faster loading and better user experience. Use when asked to \"speed up my site\", \"optimize performance\", \"reduce load time\", \"fix slow loading\", \"improve page speed\", or \"performance audit\".",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/addyosmani/web-quality-skills",
+        "commit": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
+        "path": "skills/performance"
+      },
+      "version": "2.0",
+      "license": "MIT",
+      "license_file": ".agents/skills/performance/LICENSE",
+      "group": "web-quality",
+      "files": {
+        "LICENSE": "c122223ac43e86421958e18623979942c21b642951e2e3736dcb63eff13587c3",
+        "SKILL.md": "b0c220185d88c61f7770eb127d8facf86c86d2dd1fd82b86e15a4965a0137265",
+        "references/MEASUREMENT.md": "128f6f20c6c8fb55fcccd8b259cf680811022cf262dc55b03e9d623bcb555a99",
+        "references/RUM.md": "a2bdf660ecb23098afbadfb83254d39cef10c0da82938225f61271bad3f81b19"
+      }
+    },
+    {
+      "name": "playwright-cli",
+      "path": ".agents/skills/playwright-cli",
+      "status": "vendored-project",
+      "description": "Automate browser interactions, test web pages and work with Playwright tests.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/microsoft/playwright-cli",
+        "commit": "de1164032a2e7a1155f77400bbca0d9a4c57a754",
+        "path": "skills/playwright-cli"
+      },
+      "version": "0.1.22",
+      "license": "Apache-2.0",
+      "license_file": ".agents/skills/playwright-cli/LICENSE",
+      "group": "browser",
+      "files": {
+        "LICENSE": "9a7110fc2d2f964038e5dc49128f908f29f47a574c961cba16085914e879cbda",
+        "SKILL.md": "9bba755285a4c9ad72a4a41b9c7baef6fb516d329c0b44ed0573715f4479b906",
+        "references/element-attributes.md": "bf19aa4671e0a50a0fefa9c790f39124e803060eefe395042b723c29fcb7faa2",
+        "references/playwright-tests.md": "c5b0719fef2cfdff50bd744051b2f9afc119775db4b48e9b2882c1cf3886797c",
+        "references/pr-attachments.md": "24b118e74598be72e73e24fe223d295b9099c85b1860a7c8f6e5690c9038fa2a",
+        "references/request-mocking.md": "54e801c9663fc2b6d68ceb058cb1c360724c2499f42acc7852a68e83e5b5f37c",
+        "references/running-code.md": "3029569ed6ddaeffc0b87badde967efdc2973b1677f078830098146eb3b78ebe",
+        "references/session-management.md": "a4f16271f95d3eec7bc56e659d8adbb8f6ad7d603a6fa15efdcdd071a50c6ce3",
+        "references/storage-state.md": "9ac47f9ae4a1aedcd2077f8ac9ab1ba6bee1962cb83ff51adcd36fb6d83b5ec6",
+        "references/test-generation.md": "27ecb11ef647999bd7486695bb1aacc3682097e6bb5742804cb6c8769c2b5364",
+        "references/tracing.md": "ef73e71bee792e341df9cd4f60529c929ade48b538ac76e033f4f20843e8dbda",
+        "references/video-recording.md": "1c800b897824cb54394c34265d8ebffdbb530adfc8d612c5d798b667a1799f48"
+      }
+    },
+    {
+      "name": "product-marketing",
+      "path": ".agents/skills/product-marketing",
+      "status": "vendored-project",
+      "description": "When the user wants to create or update their product marketing context document. Also use when the user mentions 'product context,' 'marketing context,' 'set up context,' 'positioning,' 'who is my target audience,' 'describe my product,' 'ICP,' 'ideal customer profile,' 'brand voice,' 'tone of voice,' 'brand guidelines,' 'what have we learned,' 'log this learning,' or wants to avoid repeating foundational information across marketing tasks. Use this at the start of any new project before using other marketing skills — it creates `.agents/product-marketing.md` that all other skills reference for product, audience, and positioning context.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/coreyhaines31/marketingskills",
+        "commit": "365b412152b9542499ca1439426f7fc3cc92bb65",
+        "path": "skills/product-marketing"
+      },
+      "version": "2.2.0",
+      "license": "MIT",
+      "license_file": ".agents/skills/product-marketing/LICENSE",
+      "group": "marketing-seo",
+      "files": {
+        "LICENSE": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "SKILL.md": "19ece0fa75c72a5a8b6e90db80f506586f54cc93bae6bffbb1bd2ef4ae7d603c",
+        "evals/evals.json": "0c6599b88f50ec1be91096a36ba6c5a15cf8312151394e3469e5ddb991b19afb",
+        "references/brand-voice.md": "932f3453db2761f03050792e39800150495dab449750b40913a4314ea97e7672"
+      }
+    },
+    {
+      "name": "schema",
+      "path": ".agents/skills/schema",
+      "status": "vendored-project",
+      "description": "When the user wants to add, fix, or optimize schema markup and structured data on their site. Also use when the user mentions \"schema markup,\" \"structured data,\" \"JSON-LD,\" \"rich snippets,\" \"schema.org,\" \"FAQ schema,\" \"product schema,\" \"review schema,\" \"breadcrumb schema,\" \"Google rich results,\" \"knowledge panel,\" \"star ratings in search,\" or \"add structured data.\" Use this whenever someone wants their pages to show enhanced results in Google. For broader SEO issues, see seo-audit. For AI search optimization, see ai-seo.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/coreyhaines31/marketingskills",
+        "commit": "365b412152b9542499ca1439426f7fc3cc92bb65",
+        "path": "skills/schema"
+      },
+      "version": "2.0.2",
+      "license": "MIT",
+      "license_file": ".agents/skills/schema/LICENSE",
+      "group": "marketing-seo",
+      "files": {
+        "LICENSE": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "SKILL.md": "d298f5d6e1b33b6825f38ecaa05c4d33ba9e45e346b224bd86f9834e46f67a94",
+        "evals/evals.json": "508d08d55abd5f1b71795f07be0330cbd4ab92d20ddfb77964d053962d6f8f16",
+        "references/schema-examples.md": "9b093bce816fac8494c8ccfd588eeb0c00e1308fe99bb46388ff222664ed94be"
+      }
+    },
+    {
+      "name": "sentry",
+      "path": ".agents/skills/sentry",
+      "status": "vendored-project",
+      "description": "Use when the user asks to inspect Sentry issues or events, summarize recent production errors, or pull basic Sentry health data via the Sentry API; perform read-only queries with the bundled script and require `SENTRY_AUTH_TOKEN`.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/openai/plugins",
+        "commit": "0722921d5542fc593105c27bd52630babd8b8c2a",
+        "path": "plugins/sentry/skills/sentry"
+      },
+      "version": "plugin-0.1.2@0722921d5542",
+      "license": "Apache-2.0",
+      "license_file": ".agents/skills/sentry/LICENSE.txt",
+      "group": "observability",
+      "license_note": "Bundled skill LICENSE.txt is Apache-2.0; surrounding plugin metadata says MIT. Only the skill is vendored.",
+      "files": {
+        "LICENSE.txt": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+        "SKILL.md": "c8ae3a1f7521b9b560adf8d0824c5ff49b1182d7f8870361b292ad1803b639c6",
+        "agents/openai.yaml": "c7ed57441b9a1e3f4caa19da4d90d432a65cd398c4f361b47dbf9408be0e065f",
+        "assets/sentry-small.svg": "f1de8efc906c03b583b4d74560b003175c8a3d9ea5950d891ce3142fec11ca99",
+        "assets/sentry.png": "b61e0534635a275cf56f7dad26ac7cc36504b7bd9a60c95791d6e72634129fb1",
+        "scripts/sentry_api.py": "d16ea37c73541d3cb704d95510b4908e90f603d4061eed996c093d9c3de326ec"
+      }
+    },
+    {
+      "name": "seo",
+      "path": ".agents/skills/seo",
+      "status": "vendored-project",
+      "description": "Optimize for search engine visibility and ranking. Use when asked to \"improve SEO\", \"optimize for search\", \"fix meta tags\", \"add structured data\", \"sitemap optimization\", or \"search engine optimization\".",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/addyosmani/web-quality-skills",
+        "commit": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
+        "path": "skills/seo"
+      },
+      "version": "2.0",
+      "license": "MIT",
+      "license_file": ".agents/skills/seo/LICENSE",
+      "group": "web-quality",
+      "files": {
+        "LICENSE": "c122223ac43e86421958e18623979942c21b642951e2e3736dcb63eff13587c3",
+        "SKILL.md": "57cd16566c2c706186b643644dec2884da89c42f296843364c65a40a4d566ae6",
+        "references/STRUCTURED-DATA.md": "3e03876f41d223c89dfdbc0a0fe3668454e5d8819aad5379f4541fbf0bd67e17"
+      }
+    },
+    {
+      "name": "seo-audit",
+      "path": ".agents/skills/seo-audit",
+      "status": "vendored-project",
+      "description": "When the user wants to audit, review, or diagnose SEO issues on their site. Also use when the user mentions \"SEO audit,\" \"technical SEO,\" \"why am I not ranking,\" \"SEO issues,\" \"on-page SEO,\" \"meta tags review,\" \"SEO health check,\" \"my traffic dropped,\" \"lost rankings,\" \"not showing up in Google,\" \"site isn't ranking,\" \"Google update hit me,\" \"page speed,\" \"core web vitals,\" \"crawl errors,\" \"indexing issues,\" \"stuck on page 2,\" \"striking distance keywords,\" \"title tag rewrite,\" \"low CTR,\" \"local SEO,\" \"Google Business Profile,\" or \"map pack.\" Use this even if the user just says something vague like \"my SEO is bad\" or \"help with SEO\" — start with an audit. For building pages at scale to target keywords, see programmatic-seo. For adding structured data, see schema. For AI search optimization, see ai-seo.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/coreyhaines31/marketingskills",
+        "commit": "365b412152b9542499ca1439426f7fc3cc92bb65",
+        "path": "skills/seo-audit"
+      },
+      "version": "2.2.1",
+      "license": "MIT",
+      "license_file": ".agents/skills/seo-audit/LICENSE",
+      "group": "marketing-seo",
+      "files": {
+        "LICENSE": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "SKILL.md": "bd5f6fca1334fc960d54403f7142e6d9da066eac7eb2b1ae194b7304bcf76d67",
+        "evals/evals.json": "1524e98916ab53abb894fb80827a8d0e1815041adca2ee2023b89916d68f22b2",
+        "references/ai-writing-detection.md": "f1e273f56ce7e2215ff218bf903680ddcec0fd026ab90c3ebfb3439ed0edfaa4",
+        "references/international-seo.md": "0603022cca968acf7889fc224221aa0e70955ba64355bc18b06f7e86b32f45e5",
+        "references/local-seo-pages-and-measurement.md": "20607ef91c4b8b37346f42130a6f51ed4ce64dc2731b6e1328b5b14f16917fe3",
+        "references/local-seo-profile-and-citations.md": "83b1b63eb6083e7aab1f56c4928335ea2a235e837861a9e9e8043b6af162a1f3",
+        "references/local-seo.md": "d2666d9c225bc36f9737ce612894abbe7e263b5974e2db7c1efc50f6010bb376",
+        "references/rankings-push.md": "2a51fa3569e00c10353526bfa98ca1faccccf9c37be78f5f229c72116f5d2154",
+        "references/title-tags.md": "c40b3c6af3600ca15670db8eb81000c7ca6fa25265a6550ccc630f53db3fcf51"
+      }
+    },
+    {
+      "name": "site-architecture",
+      "path": ".agents/skills/site-architecture",
+      "status": "vendored-project",
+      "description": "When the user wants to plan, map, or restructure their website's page hierarchy, navigation, URL structure, or internal linking. Also use when the user mentions \"sitemap,\" \"site map,\" \"visual sitemap,\" \"site structure,\" \"page hierarchy,\" \"information architecture,\" \"IA,\" \"navigation design,\" \"URL structure,\" \"breadcrumbs,\" \"internal linking strategy,\" \"website planning,\" \"what pages do I need,\" \"how should I organize my site,\" \"site navigation,\" \"which website builder should I use,\" \"migrate my website,\" or \"add a blog to my existing site.\" Use this whenever someone is planning what pages a website should have, how they connect, and where to build them. NOT for XML sitemaps (that's technical SEO — see seo-audit). For SEO audits, see seo-audit. For structured data, see schema.",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/coreyhaines31/marketingskills",
+        "commit": "365b412152b9542499ca1439426f7fc3cc92bb65",
+        "path": "skills/site-architecture"
+      },
+      "version": "2.1.0",
+      "license": "MIT",
+      "license_file": ".agents/skills/site-architecture/LICENSE",
+      "group": "marketing-seo",
+      "files": {
+        "LICENSE": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "SKILL.md": "55c0128ac29f628944444f8850b97913517f57131673824ebcad4d5ffb26ddd2",
+        "evals/evals.json": "ed6f68ba0f8355efe26d89eae51d64c381d644cc7e942e80539a660cb52c9b02",
+        "references/mermaid-templates.md": "362190c7d3f419d5f445170f1fb17beecc163937d2068922893b7a69eeb25f0f",
+        "references/navigation-patterns.md": "2efa772709b753e33d5018c007147ca30aaa95a04b04dc0df6227ea5a053078b",
+        "references/platforms-and-migration.md": "391f12c5994e1e577db75cd6044e038a276f14eda1c2ebc7f6a92293fbc59448",
+        "references/site-type-templates.md": "3c3cd7ce5e31c502dc071baf82bb58cb30f5edf4a2fd8ca052fbc8f3777db140"
+      }
+    },
+    {
+      "name": "speckit-analyze",
+      "path": ".agents/skills/speckit-analyze",
+      "status": "vendored-project",
+      "description": "Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, plan.md, and tasks.md after task generation.",
+      "source": {
+        "kind": "generated",
+        "repository": "https://github.com/github/spec-kit",
+        "commit": "74be0a63e93c7087c5b06556b7561810d8f78a45",
+        "path": "templates/commands/analyze.md"
+      },
+      "version": "1.2.2",
+      "license": "MIT",
+      "license_file": ".specify/LICENSE",
+      "group": "specification",
+      "files": {
+        "SKILL.md": "0b3261b13cc33537f24b3e1f6d5320694c348302c385d0046dc6b958cf2db6cb"
+      }
+    },
+    {
+      "name": "speckit-checklist",
+      "path": ".agents/skills/speckit-checklist",
+      "status": "vendored-project",
+      "description": "Generate a custom checklist for the current feature based on user requirements.",
+      "source": {
+        "kind": "generated",
+        "repository": "https://github.com/github/spec-kit",
+        "commit": "74be0a63e93c7087c5b06556b7561810d8f78a45",
+        "path": "templates/commands/checklist.md"
+      },
+      "version": "1.2.2",
+      "license": "MIT",
+      "license_file": ".specify/LICENSE",
+      "group": "specification",
+      "files": {
+        "SKILL.md": "7ac5cba31a27151a1a7b73f691bd478d42750ce2dd734701a07eb0e235ffbd94"
+      }
+    },
+    {
+      "name": "speckit-clarify",
+      "path": ".agents/skills/speckit-clarify",
+      "status": "vendored-project",
+      "description": "Identify underspecified areas in the current feature spec by asking up to 5 highly targeted clarification questions and encoding answers back into the spec.",
+      "source": {
+        "kind": "generated",
+        "repository": "https://github.com/github/spec-kit",
+        "commit": "74be0a63e93c7087c5b06556b7561810d8f78a45",
+        "path": "templates/commands/clarify.md"
+      },
+      "version": "1.2.2",
+      "license": "MIT",
+      "license_file": ".specify/LICENSE",
+      "group": "specification",
+      "files": {
+        "SKILL.md": "f6acfbc82c96c0d91b2429fd0b51ce7df7f94b003d1b73acc54470d48bcc455e"
+      }
+    },
+    {
+      "name": "speckit-constitution",
+      "path": ".agents/skills/speckit-constitution",
+      "status": "vendored-project",
+      "description": "Create or update the project constitution from interactive or provided principle inputs.",
+      "source": {
+        "kind": "generated",
+        "repository": "https://github.com/github/spec-kit",
+        "commit": "74be0a63e93c7087c5b06556b7561810d8f78a45",
+        "path": "templates/commands/constitution.md"
+      },
+      "version": "1.2.2",
+      "license": "MIT",
+      "license_file": ".specify/LICENSE",
+      "group": "specification",
+      "files": {
+        "SKILL.md": "b2a6a979ef7511812b60cde4adb6f1c4a8b1b57314ea2f1861ebc3f4796bf377"
+      }
+    },
+    {
+      "name": "speckit-converge",
+      "path": ".agents/skills/speckit-converge",
+      "status": "vendored-project",
+      "description": "Assess the current codebase against the feature's spec, plan, and tasks, then append any remaining unbuilt work as new tasks to tasks.md so implement can complete it.",
+      "source": {
+        "kind": "generated",
+        "repository": "https://github.com/github/spec-kit",
+        "commit": "74be0a63e93c7087c5b06556b7561810d8f78a45",
+        "path": "templates/commands/converge.md"
+      },
+      "version": "1.2.2",
+      "license": "MIT",
+      "license_file": ".specify/LICENSE",
+      "group": "specification",
+      "files": {
+        "SKILL.md": "5859c9780ddc012f600e7d35a5691e032fe05861296f226b5665a0ec03135ccd"
+      }
+    },
+    {
+      "name": "speckit-implement",
+      "path": ".agents/skills/speckit-implement",
+      "status": "vendored-project",
+      "description": "Execute the implementation plan by processing and executing all tasks defined in tasks.md",
+      "source": {
+        "kind": "generated",
+        "repository": "https://github.com/github/spec-kit",
+        "commit": "74be0a63e93c7087c5b06556b7561810d8f78a45",
+        "path": "templates/commands/implement.md"
+      },
+      "version": "1.2.2",
+      "license": "MIT",
+      "license_file": ".specify/LICENSE",
+      "group": "specification",
+      "files": {
+        "SKILL.md": "848a5c9eff7b99e348927cbde6c35378de9fea3fd317941f58fa0b0b79301eec"
+      }
+    },
+    {
+      "name": "speckit-plan",
+      "path": ".agents/skills/speckit-plan",
+      "status": "vendored-project",
+      "description": "Execute the implementation planning workflow using the plan template to generate design artifacts.",
+      "source": {
+        "kind": "generated",
+        "repository": "https://github.com/github/spec-kit",
+        "commit": "74be0a63e93c7087c5b06556b7561810d8f78a45",
+        "path": "templates/commands/plan.md"
+      },
+      "version": "1.2.2",
+      "license": "MIT",
+      "license_file": ".specify/LICENSE",
+      "group": "specification",
+      "files": {
+        "SKILL.md": "db2406adfa50103fc04ca8109ac934cd715086fba64365fb404630a88c62bda5"
+      }
+    },
+    {
+      "name": "speckit-specify",
+      "path": ".agents/skills/speckit-specify",
+      "status": "vendored-project",
+      "description": "Create or update the feature specification from a natural language feature description.",
+      "source": {
+        "kind": "generated",
+        "repository": "https://github.com/github/spec-kit",
+        "commit": "74be0a63e93c7087c5b06556b7561810d8f78a45",
+        "path": "templates/commands/specify.md"
+      },
+      "version": "1.2.2",
+      "license": "MIT",
+      "license_file": ".specify/LICENSE",
+      "group": "specification",
+      "files": {
+        "SKILL.md": "a505028de7f6489878696d6656c7d057f3a66119ebb8c0cc82d69fabb7b344ff"
+      }
+    },
+    {
+      "name": "speckit-tasks",
+      "path": ".agents/skills/speckit-tasks",
+      "status": "vendored-project",
+      "description": "Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts.",
+      "source": {
+        "kind": "generated",
+        "repository": "https://github.com/github/spec-kit",
+        "commit": "74be0a63e93c7087c5b06556b7561810d8f78a45",
+        "path": "templates/commands/tasks.md"
+      },
+      "version": "1.2.2",
+      "license": "MIT",
+      "license_file": ".specify/LICENSE",
+      "group": "specification",
+      "files": {
+        "SKILL.md": "1086d7885df1188d00e7d5eb4715e678b4340b893e8f24ae748d823b13599a56"
+      }
+    },
+    {
+      "name": "speckit-taskstoissues",
+      "path": ".agents/skills/speckit-taskstoissues",
+      "status": "vendored-project",
+      "description": "Deprecated: Convert existing tasks into actionable, dependency-ordered GitHub issues for the feature based on available design artifacts.",
+      "source": {
+        "kind": "generated",
+        "repository": "https://github.com/github/spec-kit",
+        "commit": "74be0a63e93c7087c5b06556b7561810d8f78a45",
+        "path": "templates/commands/taskstoissues.md"
+      },
+      "version": "1.2.2",
+      "license": "MIT",
+      "license_file": ".specify/LICENSE",
+      "group": "specification",
+      "files": {
+        "SKILL.md": "e149b5b337bfaf1d232af7304916bbe75f357c67c271f5e753f7a0179de240b1"
+      }
+    },
+    {
+      "name": "systematic-debugging",
+      "path": ".agents/skills/systematic-debugging",
+      "status": "vendored-project",
+      "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/obra/superpowers",
+        "commit": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
+        "path": "skills/systematic-debugging"
+      },
+      "version": "7.0.0",
+      "license": "MIT",
+      "license_file": ".agents/skills/systematic-debugging/LICENSE",
+      "group": "engineering",
+      "files": {
+        "CREATION-LOG.md": "c24733a5b1821bd6bed1fc950261f0b9f4e90097e0bbb96459d8179713730789",
+        "LICENSE": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "SKILL.md": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202",
+        "condition-based-waiting-example.ts": "40ae5ebe497fdf310200e43fe986552546d0a22837c0d39e855db1cfd33eb88e",
+        "condition-based-waiting.md": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+        "defense-in-depth.md": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+        "find-polluter.sh": "dd7b8f13c4cc2a24b33ff87b18da9248f3e1c80a085c3316224f69ff0fa5c43c",
+        "root-cause-tracing.md": "75b933b6a8c40bdb2031b10f21654395b56ec6ab6bc7b018c18d3fe57aeb7fb8",
+        "test-academic.md": "fe2ba480d78ac0d686dc025f41c2a32a43d642bf533f91b0c6053a04d35d6486",
+        "test-pressure-1.md": "0b6a915db0054577819834c79be9eb614e97bddba10d73768e1fbe91cfed048a",
+        "test-pressure-2.md": "b2030aeffba07050e8ad573ddf87486457c4a016a786bb326235bebd856f2016",
+        "test-pressure-3.md": "96b50a52e2c7989c9cf20fb752c47c1e9a3a70dc362f8f7989f8f5b64dac7708"
+      }
+    },
+    {
+      "name": "test-driven-development",
+      "path": ".agents/skills/test-driven-development",
+      "status": "vendored-project",
+      "description": "Use when implementing any feature or bugfix, before writing implementation code",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/obra/superpowers",
+        "commit": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
+        "path": "skills/test-driven-development"
+      },
+      "version": "7.0.0",
+      "license": "MIT",
+      "license_file": ".agents/skills/test-driven-development/LICENSE",
+      "group": "engineering",
+      "files": {
+        "LICENSE": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "SKILL.md": "64b03fce4aee5a97a93160cea8111f3ba13a17b7c001db4bd5836d67fd10705d",
+        "writing-good-tests.md": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1"
+      }
+    },
+    {
+      "name": "verification-before-completion",
+      "path": ".agents/skills/verification-before-completion",
+      "status": "vendored-project",
+      "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/obra/superpowers",
+        "commit": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
+        "path": "skills/verification-before-completion"
+      },
+      "version": "7.0.0",
+      "license": "MIT",
+      "license_file": ".agents/skills/verification-before-completion/LICENSE",
+      "group": "engineering",
+      "files": {
+        "LICENSE": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "SKILL.md": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+      }
+    }
+  ],
+  "shared_files": {
+    ".specify/.gitignore": "0a61c5378b0bb2e0f85babff99c8b166f2170a2c12378cd17d929aa19296ec88",
+    ".specify/init-options.json": "f79283fb8b4398681f0d5eb1050ad096efc6ff690c3fc21f8802168558e9fc40",
+    ".specify/integration.json": "86419a829e4d1c3506ad762743be3dc2e4807b1a876ed2c305f28f3423fab297",
+    ".specify/integrations/codex.manifest.json": "a7fc6028e9158ccb0790436864482c9bb6606cf74411b47dae9c69f1c9e05ec7",
+    ".specify/integrations/speckit.manifest.json": "59de39558a6ef7fd436dca61db5b4da1db11cbf491f2c236b8de8b85cd94f4af",
+    ".specify/memory/.constitution-template.json": "8fc4b39294bae0c10d59547ad7d415b6f0e890d656cbf7171dd567f4e9054711",
+    ".specify/scripts/bash/check-prerequisites.sh": "47cddf0ee476a1a5201927260666364490b7c602a52fdd8466160802925f995b",
+    ".specify/scripts/bash/common.sh": "e3f72d571b8d27088a0aa6a96068eb6583175fbfa7a48bad465be62b9898f09c",
+    ".specify/scripts/bash/create-new-feature.sh": "972f03ed8ca5ee17b7baad6d56d821d46269d77abc337496beafb0fe85a725f2",
+    ".specify/scripts/bash/resolve-template.sh": "829e227096abc8bf0889889ec9f792f503ca5d395b7836a8a7eb739ee75214e7",
+    ".specify/scripts/bash/setup-plan.sh": "d378ec66ba20d2da01c71dad8935062c1c27f0bba890be9a6d3dda52ea056a4e",
+    ".specify/scripts/bash/setup-tasks.sh": "0350b2def158c4dc333cd888fc5a3b10785b3d5c2cf936f93e910242ea9d507d",
+    ".specify/templates/checklist-template.md": "70bbc48e884fab372ffb09e83e78ff983e28b69caebf8cd9964a02b6836683ac",
+    ".specify/templates/constitution-template.md": "ce7549540fa45543cca797a150201d868e64495fdff39dc38246fb17bd4024b3",
+    ".specify/templates/plan-template.md": "a828ad6206526574ab3fc99be6d0154588cb1c9774c5919d71b81ab5b2dbffa0",
+    ".specify/templates/spec-template.md": "3945437fc35cd30a5b2bf7beea680337c3516826d3efa5a6b92c4a7eca1ba28e",
+    ".specify/templates/tasks-template.md": "b0f527d41e546af0c31903e04f9b20965b6b497b573792198f663a64ce128863",
+    ".specify/workflows/speckit/workflow.yml": "177761c5e7df28126beea043b5cb45aeaf7958090c022dc11ac71399422fcfbc",
+    ".specify/workflows/workflow-registry.json": "8c08d37ba4fa623755fd5aa2ae15ffa7a399b87d01f1d12185c35ac4a60cbfb3",
+    ".specify/LICENSE": "2510b446bc1f0cf9702453075d20cd88631e20e5642658edb7325d9c1eb534f7"
+  },
+  "selection_constraints": {
+    "https://github.com/obra/superpowers": [
+      "systematic-debugging",
+      "test-driven-development",
+      "verification-before-completion"
+    ]
+  },
+  "optional_skill_references": [
+    {
+      "from": "ads",
+      "targets": [
+        "competitor-profiling",
+        "customer-research"
+      ],
+      "status": "not-installed-optional",
+      "fallback": "Use current approved product context; do not run these optional research branches or auto-install."
+    },
+    {
+      "from": "seo, accessibility",
+      "targets": [
+        "web-quality-audit"
+      ],
+      "status": "not-installed-optional",
+      "fallback": "Run the installed focused SEO, accessibility and performance skills."
+    },
+    {
+      "from": "upstream related-skill prose",
+      "targets": [
+        "other skills outside the selected set"
+      ],
+      "status": "not-installed-optional",
+      "fallback": "Do not auto-install or invoke an unavailable skill; continue the available workflow within task scope."
+    }
+  ],
+  "external_plugins": [
+    {
+      "name": "codex-security",
+      "plugin_id": "codex-security@openai-curated-remote",
+      "source": "https://github.com/openai/plugins/tree/0722921d5542fc593105c27bd52630babd8b8c2a/plugins/codex-security",
+      "reviewed_version": "0.1.32",
+      "license": "Proprietary",
+      "delivery": "official-client",
+      "status": "installation-confirmed-completion-pending",
+      "install_result": {
+        "user_confirmed": true,
+        "completed": false
+      },
+      "runtime_version": null,
+      "vendored": false
+    }
+  ],
+  "optional_runtimes": {
+    "playwright-cli": {
+      "version": "0.1.22",
+      "package": "@playwright/cli",
+      "npm_integrity": "sha512-6WMkQNM4VEzqMkdr/l60X9Cr7i+tI/arK87IWz2K7pB6j8I2ZJ8KN+1JfhJDLnK+SXnab6Op8xGt4adcGLsyfA==",
+      "cloud_binary": "/workspace/.tools/playwright/node_modules/.bin/playwright-cli",
+      "dependencies": {
+        "playwright": "1.64.0-alpha-1790635538000",
+        "playwright-core": "1.64.0-alpha-1790635538000"
+      }
+    },
+    "specify-cli": {
+      "version": "1.2.2",
+      "cloud_binary": "/workspace/.tools/bin/specify"
+    },
+    "sentry": {
+      "runtime": "Python standard library",
+      "credentials_configured_by_this_task": false
+    }
+  },
+  "legacy_manifests": [
+    "docs/design-skills-lock.json",
+    "docs/spec-kit-lock.json"
+  ],
+  "codex_loading": {
+    "scope": "repository",
+    "skills_directory": ".agents/skills",
+    "required_session_cwd": "repository root or a directory below it",
+    "cloud_repository_root": "/workspace/EP-Base",
+    "setup_script": "scripts/cloud-skills-setup.sh",
+    "start_instructions": "docs/CLOUD_START.md",
+    "new_session_test": "docs/SKILL_SMOKE_PROMPT.md",
+    "native_status": "blocked-by-read-only-service-profile",
+    "native_status_report": "docs/skills-connection-validation.json",
+    "versioning": "Vendored sources use upstream commit and file hashes; the original project skill uses its semantic version and file hashes within the repository commit."
+  }
+}
